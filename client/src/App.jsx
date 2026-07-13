@@ -13,6 +13,7 @@ import PaiementRetourPage from './pages/PaiementRetourPage';
 import AnnuairePage from './pages/AnnuairePage';
 import ProfilPublicPage from './pages/ProfilPublicPage';
 import MaFichePage from './pages/MaFichePage';
+import LabellisationPage from './pages/LabellisationPage';
 import { PrivateRoute, GuestRoute, AdminRoute } from './components/auth/RouteGuards';
 
 const queryClient = new QueryClient({
@@ -85,6 +86,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <MaFichePage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="dashboard/labellisation"
+              element={
+                <PrivateRoute allowPending={false}>
+                  <LabellisationPage />
                 </PrivateRoute>
               }
             />

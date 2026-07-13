@@ -17,10 +17,10 @@ fs.mkdirSync(path.join(uploadsRoot, 'produits'), { recursive: true });
 const storage = multer.memoryStorage();
 
 function fileFilter(_req, file, cb) {
-  if (!/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) {
-    return cb(new AppError('Format image non supporté', { status: 400, code: 'INVALID_FILE' }));
+  if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype) || file.mimetype === 'application/pdf') {
+    return cb(null, true);
   }
-  cb(null, true);
+  return cb(new AppError('Format non supporté (image ou PDF)', { status: 400, code: 'INVALID_FILE' }));
 }
 
 export const uploadImage = multer({
