@@ -9,6 +9,7 @@ import ConnexionPage from './pages/ConnexionPage';
 import DashboardPage from './pages/DashboardPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import PaiementRetourPage from './pages/PaiementRetourPage';
 import { PrivateRoute, GuestRoute, AdminRoute } from './components/auth/RouteGuards';
 
 const queryClient = new QueryClient({
@@ -74,6 +75,7 @@ export default function App() {
             />
             <Route path="mot-de-passe-oublie" element={<ForgotPasswordPage />} />
             <Route path="reinitialiser-mot-de-passe" element={<ResetPasswordPage />} />
+            <Route path="paiement/retour" element={<PaiementRetourPage />} />
             <Route
               path="dashboard"
               element={

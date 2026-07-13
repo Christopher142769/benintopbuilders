@@ -46,7 +46,19 @@ export const acceptCharte = asyncHandler(async (req, res) => {
 export const selectPalier = asyncHandler(async (req, res) => {
   const body = palierSchema.parse(req.body);
   const data = await authService.selectPalier(req.user._id, body.palier);
-  return ok(res, data, data.needsPayment ? 'Paiement requis' : 'Adhésion activée');
+  return ok(
+    res,
+    {
+      user: data.user,
+      needsPayment: data.needsPayment,
+      montant: data.montant,
+      nextStep: data.nextStep,
+      paiement: data.paiement,
+      checkoutUrl: data.checkoutUrl,
+      sandbox: data.sandbox,
+    },
+    data.needsPayment ? 'Paiement requis' : 'Adhésion activée'
+  );
 });
 
 export const login = asyncHandler(async (req, res) => {

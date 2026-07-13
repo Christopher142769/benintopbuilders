@@ -14,6 +14,7 @@ import { sendOtpEmail, sendWelcomeEmail, sendPasswordResetEmail } from './mail.s
 import { env } from '../config/env.js';
 import { TARIFS_FCFA } from '../config/constants.js';
 import { logger } from '../config/logger.js';
+import { initierAdhesionPaiement } from './paiement.service.js';
 
 const REFRESH_COOKIE = 'btb_refresh';
 
@@ -212,12 +213,16 @@ export async function selectPalier(userId, palier) {
   }
 
   await user.save();
+  const pay = await initierAdhesionPaiement(user, palier, 'sandbox');
   return {
     user: publicUser(user),
     needsPayment: true,
     montant,
     nextStep: 'paiement_fspay',
-    message: 'Paiement FSPay requis (disponible à l\'étape 4)',
+    paiement: pay.paiement,
+    checkoutUrl: pay.checkoutUrl,
+    sandbox: pay.sandbox,
+    message: 'Redirection vers le paiement FSPay',
   };
 }
 

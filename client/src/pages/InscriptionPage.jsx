@@ -167,10 +167,12 @@ export default function InscriptionPage() {
       const { data } = await api.post('/auth/adhesion/palier', { palier });
       setSession(data.data.user, useAuthStore.getState().accessToken);
       if (data.data.needsPayment) {
-        toast(
-          `Paiement ${formatFcfa(data.data.montant)} via FSPay — disponible prochainement (sandbox étape 4).`,
-          { icon: '⏳' }
-        );
+        toast.success('Paiement sandbox initié');
+        if (data.data.checkoutUrl) {
+          navigate(data.data.checkoutUrl.replace(/^https?:\/\/[^/]+/, '') || `/paiement/retour?ref=${data.data.paiement?.refInterne}`);
+        } else if (data.data.paiement?.refInterne) {
+          navigate(`/paiement/retour?ref=${data.data.paiement.refInterne}`);
+        }
       } else {
         toast.success('Compte activé — bienvenue !');
         navigate('/dashboard');
@@ -426,8 +428,8 @@ export default function InscriptionPage() {
                   ))}
                 </div>
                 <p className="mt-2 text-xs text-black/50">
-                  Le checkout FSPay sandbox sera branché à l&apos;étape 4. Choisissez Découverte pour
-                  activer immédiatement.
+                  Paiement sécurisé via FSPay (Mobile Money ou carte). En sandbox, la confirmation
+                  arrive en ~2 secondes.
                 </p>
               </div>
             )}
