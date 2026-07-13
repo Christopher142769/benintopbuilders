@@ -18,10 +18,24 @@ const baseRegister = {
   entreprise: 'Atelier Mensah',
   departement: 'Littoral',
   ville: 'Cotonou',
-  zonesIntervention: ['Cotonou', 'Abomey-Calavi'],
+  zonesIntervention: JSON.stringify(['Cotonou', 'Abomey-Calavi']),
   presentation: 'Maçonnerie et finitions.',
-  metiers: ['maconnerie'],
+  metiers: JSON.stringify(['maconnerie']),
 };
+
+const fakePdf = Buffer.from('%PDF-1.4 fake rccm document for tests');
+
+function registerRequest(overrides = {}) {
+  const data = { ...baseRegister, ...overrides };
+  let req = request(app).post('/api/auth/register');
+  for (const [key, value] of Object.entries(data)) {
+    req = req.field(key, value);
+  }
+  return req.attach('rccm', fakePdf, {
+    filename: 'rccm-atelier.pdf',
+    contentType: 'application/pdf',
+  });
+}
 
 beforeAll(async () => {
   await connectMongo();
@@ -39,10 +53,11 @@ afterAll(async () => {
 
 describe('Parcours adhésion register → otp → charte → login', () => {
   it('exécute le flux complet jusqu\'à l\'activation Découverte', async () => {
-    const reg = await request(app).post('/api/auth/register').send(baseRegister);
+    const reg = await registerRequest();
     expect(reg.status).toBe(201);
     expect(reg.body.success).toBe(true);
     expect(reg.body.data.user.statut).toBe('pending_otp');
+    expect(reg.body.data.user.rccmDocumentUrl).toMatch(/^\/uploads\/rccm\//);
 
     const code = __devOtpStore.get(baseRegister.email);
     expect(code).toMatch(/^\d{6}$/);
@@ -82,8 +97,23 @@ describe('Parcours adhésion register → otp → charte → login', () => {
     expect(login.headers['set-cookie']?.some((c) => c.startsWith('btb_refresh='))).toBe(true);
   });
 
+  it('refuse un inscription artisan sans fichier RCCM', async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      profilType: 'artisan',
+      email: 'sans.rccm@example.bj',
+      password: 'Password123!',
+      prenom: 'Sans',
+      nom: 'Rccm',
+      telephone: '+22997000002',
+      departement: 'Littoral',
+      ville: 'Cotonou',
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('RCCM_REQUIRED');
+  });
+
   it('refuse un OTP incorrect et limite les essais', async () => {
-    await request(app).post('/api/auth/register').send(baseRegister);
+    await registerRequest();
 
     for (let i = 0; i < 6; i += 1) {
       const res = await request(app)
@@ -100,8 +130,8 @@ describe('Parcours adhésion register → otp → charte → login', () => {
   });
 
   it('refuse un e-mail déjà inscrit', async () => {
-    await request(app).post('/api/auth/register').send(baseRegister);
-    const again = await request(app).post('/api/auth/register').send(baseRegister);
+    await registerRequest();
+    const again = await registerRequest();
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('EMAIL_EXISTS');
   });

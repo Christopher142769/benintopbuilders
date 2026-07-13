@@ -40,6 +40,7 @@ export default function InscriptionPage() {
   const [charteOk, setCharteOk] = useState(false);
   const [palier, setPalier] = useState('decouverte');
   const [moyenPaiement, setMoyenPaiement] = useState('mtn');
+  const [rccmFile, setRccmFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
 
@@ -64,7 +65,6 @@ export default function InscriptionPage() {
       telephone: '',
       entreprise: '',
       ifu: '',
-      rccm: '',
       departement: 'Littoral',
       ville: '',
       zonesIntervention: '',
@@ -85,21 +85,46 @@ export default function InscriptionPage() {
       toast.error('Choisissez un profil');
       return;
     }
+    const needsRccm = profilType !== 'maitre_ouvrage';
+    if (needsRccm && !rccmFile) {
+      toast.error('Joignez votre RCCM (PDF, DOC ou DOCX)');
+      return;
+    }
+    if (rccmFile) {
+      const okExt = /\.(pdf|doc|docx)$/i.test(rccmFile.name);
+      if (!okExt) {
+        toast.error('RCCM : formats acceptés PDF, DOC, DOCX');
+        return;
+      }
+    }
     setLoading(true);
     try {
-      const payload = {
-        ...values,
-        profilType,
-        zonesIntervention: (values.zonesIntervention || '')
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
-        metiers: values.metiers || [],
-      };
-      if (profilType === 'fournisseur' && !payload.metiers.includes('fourniture_materiaux')) {
-        payload.metiers = [...payload.metiers, 'fourniture_materiaux'];
+      const zonesIntervention = (values.zonesIntervention || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      let metiers = values.metiers || [];
+      if (profilType === 'fournisseur' && !metiers.includes('fourniture_materiaux')) {
+        metiers = [...metiers, 'fourniture_materiaux'];
       }
-      const { data } = await api.post('/auth/register', payload);
+
+      const fd = new FormData();
+      fd.append('profilType', profilType);
+      fd.append('email', values.email);
+      fd.append('password', values.password);
+      fd.append('prenom', values.prenom);
+      fd.append('nom', values.nom);
+      fd.append('telephone', values.telephone);
+      if (values.entreprise) fd.append('entreprise', values.entreprise);
+      if (values.ifu) fd.append('ifu', values.ifu);
+      fd.append('departement', values.departement);
+      fd.append('ville', values.ville);
+      fd.append('zonesIntervention', JSON.stringify(zonesIntervention));
+      fd.append('metiers', JSON.stringify(metiers));
+      if (values.presentation) fd.append('presentation', values.presentation);
+      if (rccmFile) fd.append('rccm', rccmFile);
+
+      const { data } = await api.post('/auth/register', fd);
       setEmail(values.email);
       toast.success(data.message || 'Code OTP envoyé');
       setResendIn(60);
@@ -256,7 +281,6 @@ export default function InscriptionPage() {
               ['password', 'Mot de passe', 'password'],
               ['entreprise', 'Entreprise / structure'],
               ['ifu', 'IFU'],
-              ['rccm', 'RCCM'],
               ['ville', 'Ville'],
             ].map(([name, label, type = 'text']) => (
               <label key={name} className="block text-sm font-bold">
@@ -273,6 +297,24 @@ export default function InscriptionPage() {
                 )}
               </label>
             ))}
+            {profilType !== 'maitre_ouvrage' && (
+              <label className="block text-sm font-bold sm:col-span-2">
+                RCCM <span className="font-semibold text-orange">(PDF, DOC ou DOCX)</span>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="mt-1.5 w-full rounded-2xl border-[1.5px] border-black/10 bg-fond-doux px-4 py-3 font-medium file:mr-3 file:rounded-pill file:border-0 file:bg-ink file:px-4 file:py-2 file:text-xs file:font-extrabold file:text-white"
+                  onChange={(e) => setRccmFile(e.target.files?.[0] || null)}
+                />
+                {rccmFile ? (
+                  <span className="mt-1 block text-xs font-semibold text-bleu">{rccmFile.name}</span>
+                ) : (
+                  <span className="mt-1 block text-xs font-medium text-black/50">
+                    Joignez l&apos;extrait RCCM pour soumettre votre dossier d&apos;adhésion.
+                  </span>
+                )}
+              </label>
+            )}
             <label className="block text-sm font-bold">
               Département
               <select

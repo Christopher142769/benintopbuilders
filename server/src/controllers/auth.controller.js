@@ -1,6 +1,8 @@
 import { ok, created } from '../utils/apiResponse.js';
+import { AppError } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import * as authService from '../services/auth.service.js';
+import { saveDocument } from '../services/upload.service.js';
 import {
   registerSchema,
   otpVerifySchema,
@@ -11,8 +13,51 @@ import {
   resetPasswordSchema,
 } from '../validators/auth.validators.js';
 
+function parseRegisterBody(raw) {
+  const body = { ...raw };
+  if (typeof body.zonesIntervention === 'string') {
+    try {
+      body.zonesIntervention = JSON.parse(body.zonesIntervention);
+    } catch {
+      body.zonesIntervention = body.zonesIntervention
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+  if (typeof body.metiers === 'string') {
+    try {
+      body.metiers = JSON.parse(body.metiers);
+    } catch {
+      body.metiers = body.metiers
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+  return body;
+}
+
 export const register = asyncHandler(async (req, res) => {
-  const body = registerSchema.parse(req.body);
+  const body = registerSchema.parse(parseRegisterBody(req.body));
+
+  const needsRccmFile = body.profilType !== 'maitre_ouvrage';
+  if (needsRccmFile && !req.file) {
+    throw new AppError('Le fichier RCCM (PDF, DOC ou DOCX) est obligatoire', {
+      status: 422,
+      code: 'RCCM_REQUIRED',
+    });
+  }
+
+  if (req.file) {
+    const saved = await saveDocument(req.file, {
+      folder: 'rccm',
+      filenamePrefix: 'rccm',
+    });
+    body.rccmDocumentUrl = saved.url;
+    body.rccmDocumentNom = saved.nomOriginal;
+  }
+
   const data = await authService.register(body);
   return created(res, data, data.message);
 });

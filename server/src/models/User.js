@@ -56,6 +56,8 @@ const userSchema = new mongoose.Schema(
     entreprise: { type: String, trim: true },
     ifu: { type: String, trim: true },
     rccm: { type: String, trim: true },
+    rccmDocumentUrl: { type: String },
+    rccmDocumentNom: { type: String, trim: true },
     departement: { type: String, enum: DEPARTEMENTS },
     ville: { type: String, trim: true },
     zonesIntervention: [{ type: String, trim: true }],

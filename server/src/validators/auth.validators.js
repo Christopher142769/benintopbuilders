@@ -14,7 +14,10 @@ export const registerSchema = z.object({
   telephone: z.string().min(8).max(20).trim(),
   entreprise: z.string().min(1).max(160).trim().optional(),
   ifu: z.string().max(40).trim().optional(),
+  // Le numéro texte est optionnel ; le fichier RCCM est géré à part (multer)
   rccm: z.string().max(40).trim().optional(),
+  rccmDocumentUrl: z.string().optional(),
+  rccmDocumentNom: z.string().optional(),
   departement: z.enum(DEPARTEMENTS),
   ville: z.string().min(1).max(100).trim(),
   zonesIntervention: z.array(z.string().trim()).max(20).default([]),

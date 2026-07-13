@@ -92,6 +92,8 @@ export async function register(payload) {
     entreprise: payload.entreprise,
     ifu: payload.ifu,
     rccm: payload.rccm,
+    rccmDocumentUrl: payload.rccmDocumentUrl,
+    rccmDocumentNom: payload.rccmDocumentNom,
     departement: payload.departement,
     ville: payload.ville,
     zonesIntervention: payload.zonesIntervention || [],

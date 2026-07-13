@@ -12,12 +12,12 @@ export const infoSchema = z.object({
   telephone: z.string().min(8, 'Téléphone requis'),
   entreprise: z.string().optional(),
   ifu: z.string().optional(),
-  rccm: z.string().optional(),
   departement: z.string().min(1, 'Département requis'),
   ville: z.string().min(1, 'Ville requise'),
   zonesIntervention: z.string().optional(),
   presentation: z.string().max(5000).optional(),
   metiers: z.array(z.string()).default([]),
+  rccmFile: z.any().optional(),
 });
 
 export const loginSchema = z.object({

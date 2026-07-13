@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as authController from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/auth.js';
 import { requireStatut } from '../middlewares/auth.js';
+import { uploadDocument } from '../middlewares/upload.js';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -17,7 +18,12 @@ const authLimiter = rateLimit({
   },
 });
 
-router.post('/register', authLimiter, authController.register);
+router.post(
+  '/register',
+  authLimiter,
+  uploadDocument.single('rccm'),
+  authController.register
+);
 router.post('/otp/verify', authLimiter, authController.verifyOtp);
 router.post('/otp/resend', authLimiter, authController.resendOtp);
 router.post('/login', authLimiter, authController.login);
