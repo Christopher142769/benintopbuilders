@@ -24,6 +24,12 @@ export const env = {
   fspayApiKey: process.env.FSPAY_API_KEY || '',
   fspayWebhookSecret: process.env.FSPAY_WEBHOOK_SECRET || 'dev-fspay-webhook-secret',
   fspayCallbackUrl: process.env.FSPAY_CALLBACK_URL || 'http://localhost:5173/paiement/retour',
+  smtpHost: process.env.SMTP_HOST || '',
+  smtpPort: Number(process.env.SMTP_PORT || 587),
+  smtpSecure: process.env.SMTP_SECURE === 'true',
+  smtpUser: process.env.SMTP_USER || '',
+  smtpPass: process.env.SMTP_PASS || '',
+  mailFrom: process.env.MAIL_FROM || 'Bénin Top Builders <noreply@benintopbuilders.bj>',
 };
 
 export const isProd = env.nodeEnv === 'production';

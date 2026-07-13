@@ -4,6 +4,12 @@ import { Toaster } from 'react-hot-toast';
 import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import InscriptionPage from './pages/InscriptionPage';
+import ConnexionPage from './pages/ConnexionPage';
+import DashboardPage from './pages/DashboardPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import { PrivateRoute, GuestRoute, AdminRoute } from './components/auth/RouteGuards';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,22 +63,31 @@ export default function App() {
             <Route
               path="connexion"
               element={
-                <PlaceholderPage title="Connexion" description="L'espace membre sera disponible à l'étape d'authentification." />
+                <GuestRoute>
+                  <ConnexionPage />
+                </GuestRoute>
               }
             />
             <Route
               path="inscription"
-              element={
-                <PlaceholderPage
-                  title="Inscription"
-                  description="Le wizard d'adhésion en 5 étapes arrive à l'étape 3."
-                />
-              }
+              element={<InscriptionPage />}
             />
+            <Route path="mot-de-passe-oublie" element={<ForgotPasswordPage />} />
+            <Route path="reinitialiser-mot-de-passe" element={<ResetPasswordPage />} />
             <Route
               path="dashboard"
               element={
-                <PlaceholderPage title="Tableau de bord" description="Espace membre — bientôt disponible." />
+                <PrivateRoute>
+                  <DashboardPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="admin"
+              element={
+                <AdminRoute>
+                  <PlaceholderPage title="Back-office" description="Espace administrateur — étape 12." />
+                </AdminRoute>
               }
             />
             <Route

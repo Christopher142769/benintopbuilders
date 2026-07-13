@@ -1,0 +1,95 @@
+import { ok, created } from '../utils/apiResponse.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import * as authService from '../services/auth.service.js';
+import {
+  registerSchema,
+  otpVerifySchema,
+  otpResendSchema,
+  loginSchema,
+  palierSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../validators/auth.validators.js';
+
+export const register = asyncHandler(async (req, res) => {
+  const body = registerSchema.parse(req.body);
+  const data = await authService.register(body);
+  return created(res, data, data.message);
+});
+
+export const verifyOtp = asyncHandler(async (req, res) => {
+  const body = otpVerifySchema.parse(req.body);
+  const data = await authService.verifyOtp(body);
+  res.cookie(authService.REFRESH_COOKIE, data.refreshToken, authService.refreshCookieOptions());
+  return ok(
+    res,
+    {
+      accessToken: data.accessToken,
+      user: data.user,
+      nextStep: data.nextStep,
+    },
+    'E-mail vérifié'
+  );
+});
+
+export const resendOtp = asyncHandler(async (req, res) => {
+  const body = otpResendSchema.parse(req.body);
+  const data = await authService.resendOtp(body.email);
+  return ok(res, data, data.message);
+});
+
+export const acceptCharte = asyncHandler(async (req, res) => {
+  const data = await authService.acceptCharte(req.user._id);
+  return ok(res, data, 'Charte acceptée');
+});
+
+export const selectPalier = asyncHandler(async (req, res) => {
+  const body = palierSchema.parse(req.body);
+  const data = await authService.selectPalier(req.user._id, body.palier);
+  return ok(res, data, data.needsPayment ? 'Paiement requis' : 'Adhésion activée');
+});
+
+export const login = asyncHandler(async (req, res) => {
+  const body = loginSchema.parse(req.body);
+  const data = await authService.login(body);
+  res.cookie(authService.REFRESH_COOKIE, data.refreshToken, authService.refreshCookieOptions());
+  return ok(
+    res,
+    {
+      accessToken: data.accessToken,
+      user: data.user,
+      redirect: data.redirect,
+    },
+    'Connexion réussie'
+  );
+});
+
+export const refresh = asyncHandler(async (req, res) => {
+  const token = req.cookies?.[authService.REFRESH_COOKIE] || req.body?.refreshToken;
+  const data = await authService.refresh(token);
+  res.cookie(authService.REFRESH_COOKIE, data.refreshToken, authService.refreshCookieOptions());
+  return ok(res, { accessToken: data.accessToken, user: data.user }, 'Token renouvelé');
+});
+
+export const logout = asyncHandler(async (req, res) => {
+  await authService.logout(req.user?._id);
+  res.clearCookie(authService.REFRESH_COOKIE, { path: '/api/auth' });
+  return ok(res, null, 'Déconnexion réussie');
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const body = forgotPasswordSchema.parse(req.body);
+  const data = await authService.forgotPassword(body.email);
+  return ok(res, data, data.message);
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const body = resetPasswordSchema.parse(req.body);
+  const data = await authService.resetPassword(body);
+  return ok(res, data, data.message);
+});
+
+export const me = asyncHandler(async (req, res) => {
+  const user = await authService.me(req.user._id);
+  return ok(res, { user }, 'OK');
+});

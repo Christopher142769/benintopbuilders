@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 const links = [
   { to: '/annuaire', label: 'Annuaire' },
@@ -10,6 +11,9 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-50 border-b border-filet bg-white/95 backdrop-blur-md">
@@ -35,12 +39,27 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link to="/connexion" className="btn-line !px-4 !py-2.5 text-sm">
-            Connexion
-          </Link>
-          <Link to="/inscription" className="btn-ink !px-5 !py-2.5 text-sm">
-            S&apos;inscrire
-          </Link>
+          {accessToken && user ? (
+            <>
+              <Link to="/dashboard" className="btn-line !px-4 !py-2.5 text-sm">
+                Mon espace
+              </Link>
+              {(user.role === 'admin' || user.role === 'superadmin') && (
+                <Link to="/admin" className="btn-ink !px-4 !py-2.5 text-sm">
+                  Admin
+                </Link>
+              )}
+            </>
+          ) : (
+            <>
+              <Link to="/connexion" className="btn-line !px-4 !py-2.5 text-sm">
+                Connexion
+              </Link>
+              <Link to="/inscription" className="btn-ink !px-5 !py-2.5 text-sm">
+                S&apos;inscrire
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -73,12 +92,27 @@ export default function Navbar() {
             ))}
           </div>
           <div className="mt-4 flex flex-col gap-2 border-t border-filet pt-4">
-            <Link to="/connexion" onClick={() => setOpen(false)} className="btn-line w-full">
-              Connexion
-            </Link>
-            <Link to="/inscription" onClick={() => setOpen(false)} className="btn-orange w-full">
-              S&apos;inscrire
-            </Link>
+            {accessToken && user ? (
+              <button
+                type="button"
+                className="btn-orange w-full"
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/dashboard');
+                }}
+              >
+                Mon espace
+              </button>
+            ) : (
+              <>
+                <Link to="/connexion" onClick={() => setOpen(false)} className="btn-line w-full">
+                  Connexion
+                </Link>
+                <Link to="/inscription" onClick={() => setOpen(false)} className="btn-orange w-full">
+                  S&apos;inscrire
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

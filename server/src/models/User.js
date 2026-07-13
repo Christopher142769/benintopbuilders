@@ -64,16 +64,14 @@ const userSchema = new mongoose.Schema(
     logoUrl: String,
     disponible: { type: Boolean, default: true, index: true },
 
-    // GeoJSON Point [lng, lat]
+    // GeoJSON Point [lng, lat] — omis tant que non renseigné (évite index 2dsphere cassé)
     localisation: {
       type: {
         type: String,
         enum: ['Point'],
-        default: 'Point',
       },
       coordinates: {
         type: [Number],
-        default: undefined,
       },
     },
 
