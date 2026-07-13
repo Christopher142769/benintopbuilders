@@ -10,6 +10,9 @@ import DashboardPage from './pages/DashboardPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import PaiementRetourPage from './pages/PaiementRetourPage';
+import AnnuairePage from './pages/AnnuairePage';
+import ProfilPublicPage from './pages/ProfilPublicPage';
+import MaFichePage from './pages/MaFichePage';
 import { PrivateRoute, GuestRoute, AdminRoute } from './components/auth/RouteGuards';
 
 const queryClient = new QueryClient({
@@ -25,15 +28,8 @@ export default function App() {
         <Routes>
           <Route element={<MainLayout />}>
             <Route index element={<HomePage />} />
-            <Route
-              path="annuaire"
-              element={
-                <PlaceholderPage
-                  title="Annuaire géolocalisé"
-                  description="Recherchez les professionnels du BTP par métier, département et label."
-                />
-              }
-            />
+            <Route path="annuaire" element={<AnnuairePage />} />
+            <Route path="pro/:slug" element={<ProfilPublicPage />} />
             <Route
               path="appels-offres"
               element={
@@ -81,6 +77,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <DashboardPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="dashboard/ma-fiche"
+              element={
+                <PrivateRoute>
+                  <MaFichePage />
                 </PrivateRoute>
               }
             />

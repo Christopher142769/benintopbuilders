@@ -31,6 +31,7 @@ export default function DashboardPage() {
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
+          { to: '/dashboard/ma-fiche', title: 'Ma fiche', desc: 'Logo, présentation, géoloc, références' },
           { to: '/annuaire', title: 'Annuaire', desc: 'Consulter les professionnels' },
           { to: '/appels-offres', title: 'Appels d\'offres', desc: 'Besoins et réponses' },
           { to: '/materiaux', title: 'Matériaux', desc: 'Marketplace fournisseurs' },
