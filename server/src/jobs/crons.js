@@ -1,9 +1,10 @@
 import cron from 'node-cron';
 import { logger } from '../config/logger.js';
 import { cloturerExpires, resetQuotasMensuels } from '../services/ao.service.js';
+import { restituerStocksExpires } from '../services/marketplace.service.js';
+import { runAdhesionLifecycle } from '../services/adhesion.service.js';
 
 export function startCronJobs() {
-  // Clôture horaire des AO
   cron.schedule('0 * * * *', async () => {
     try {
       const n = await cloturerExpires();
@@ -13,7 +14,6 @@ export function startCronJobs() {
     }
   });
 
-  // Reset quotas le 1er du mois à 00:05
   cron.schedule('5 0 1 * *', async () => {
     try {
       const n = await resetQuotasMensuels();
@@ -23,5 +23,23 @@ export function startCronJobs() {
     }
   });
 
-  logger.info('Crons AO démarrés');
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      const n = await restituerStocksExpires();
+      if (n) logger.info({ n }, 'Stocks restitués (paiement échoué)');
+    } catch (err) {
+      logger.error({ err }, 'Cron restitution stock');
+    }
+  });
+
+  cron.schedule('0 6 * * *', async () => {
+    try {
+      const result = await runAdhesionLifecycle();
+      logger.info(result, 'Cycle adhésion exécuté');
+    } catch (err) {
+      logger.error({ err }, 'Cron adhésion');
+    }
+  });
+
+  logger.info('Crons démarrés');
 }
