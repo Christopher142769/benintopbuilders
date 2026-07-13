@@ -29,12 +29,25 @@ export default function DashboardPage() {
         {user?.label?.niveau ? ` · label ${user.label.niveau}` : ''}.
       </p>
 
+      {user?.statut === 'expire' && (
+        <div className="mt-4 rounded-2xl bg-orange-soft p-4 text-sm font-bold text-orange">
+          Adhésion expirée — fiche masquée.{' '}
+          <Link to="/dashboard/adhesion?reactiver=1" className="underline">
+            Réactiver
+          </Link>
+        </div>
+      )}
+
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
           { to: '/dashboard/ma-fiche', title: 'Ma fiche', desc: 'Logo, présentation, géoloc, références' },
           { to: '/dashboard/labellisation', title: 'Labellisation', desc: 'Demander Bronze / Argent / Or' },
+          { to: '/dashboard/adhesion', title: 'Adhésion', desc: 'Palier, renouvellement, paiements' },
+          { to: '/dashboard/messagerie', title: 'Messagerie', desc: 'Conversations intermédiées' },
           { to: '/dashboard/mes-ao', title: 'Mes AO', desc: 'Gérer les réponses reçues' },
           { to: '/dashboard/mes-reponses', title: 'Mes réponses', desc: 'Suivi des offres déposées' },
+          { to: '/dashboard/boutique', title: 'Ma boutique', desc: 'Produits & ventes (fournisseur)' },
+          { to: '/dashboard/commandes', title: 'Mes commandes', desc: 'Suivi marketplace' },
           { to: '/annuaire', title: 'Annuaire', desc: 'Consulter les professionnels' },
           { to: '/appels-offres', title: 'Appels d\'offres', desc: 'Besoins et réponses' },
           { to: '/materiaux', title: 'Matériaux', desc: 'Marketplace fournisseurs' },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import NotificationBell from './NotificationBell';
 
 const links = [
   { to: '/annuaire', label: 'Annuaire' },
@@ -41,6 +42,10 @@ export default function Navbar() {
         <div className="hidden items-center gap-2 md:flex">
           {accessToken && user ? (
             <>
+              <NotificationBell />
+              <Link to="/dashboard/messagerie" className="btn-line !px-4 !py-2.5 text-sm">
+                Messages
+              </Link>
               <Link to="/dashboard" className="btn-line !px-4 !py-2.5 text-sm">
                 Mon espace
               </Link>

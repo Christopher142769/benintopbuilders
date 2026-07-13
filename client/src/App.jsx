@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import MainLayout from './components/layout/MainLayout';
-import HomePage from './pages/HomePage';
+import LandingPage from './pages/LandingPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import InscriptionPage from './pages/InscriptionPage';
 import ConnexionPage from './pages/ConnexionPage';
@@ -17,6 +17,20 @@ import AppelsOffresPage from './pages/AppelsOffresPage';
 import MesAOPage from './pages/MesAOPage';
 import MesReponsesPage from './pages/MesReponsesPage';
 import LabellisationPage from './pages/LabellisationPage';
+import MateriauxPage from './pages/MateriauxPage';
+import BoutiquePage from './pages/BoutiquePage';
+import MesCommandesPage from './pages/MesCommandesPage';
+import FormationsPage from './pages/FormationsPage';
+import MessageriePage from './pages/MessageriePage';
+import AdhesionPage from './pages/AdhesionPage';
+import AdminLayout from './pages/admin/AdminLayout';
+import {
+  AdminStatsPage,
+  AdminDossiersPage,
+  AdminMembresPage,
+  AdminModerationPage,
+  AdminAuditPage,
+} from './pages/admin/AdminPages';
 import { PrivateRoute, GuestRoute, AdminRoute } from './components/auth/RouteGuards';
 
 const queryClient = new QueryClient({
@@ -30,29 +44,14 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          <Route index element={<LandingPage />} />
+
           <Route element={<MainLayout />}>
-            <Route index element={<HomePage />} />
             <Route path="annuaire" element={<AnnuairePage />} />
             <Route path="pro/:slug" element={<ProfilPublicPage />} />
             <Route path="appels-offres" element={<AppelsOffresPage />} />
-            <Route
-              path="materiaux"
-              element={
-                <PlaceholderPage
-                  title="Matériaux"
-                  description="Catalogue des fournisseurs labellisés — ciment, fer, carrelage et plus."
-                />
-              }
-            />
-            <Route
-              path="formations"
-              element={
-                <PlaceholderPage
-                  title="Formations"
-                  description="Sessions présentes et en ligne pour monter en compétences."
-                />
-              }
-            />
+            <Route path="materiaux" element={<MateriauxPage />} />
+            <Route path="formations" element={<FormationsPage />} />
             <Route
               path="connexion"
               element={
@@ -61,10 +60,7 @@ export default function App() {
                 </GuestRoute>
               }
             />
-            <Route
-              path="inscription"
-              element={<InscriptionPage />}
-            />
+            <Route path="inscription" element={<InscriptionPage />} />
             <Route path="mot-de-passe-oublie" element={<ForgotPasswordPage />} />
             <Route path="reinitialiser-mot-de-passe" element={<ResetPasswordPage />} />
             <Route path="paiement/retour" element={<PaiementRetourPage />} />
@@ -109,16 +105,59 @@ export default function App() {
               }
             />
             <Route
-              path="admin"
+              path="dashboard/boutique"
               element={
-                <AdminRoute>
-                  <PlaceholderPage title="Back-office" description="Espace administrateur — étape 12." />
-                </AdminRoute>
+                <PrivateRoute allowPending={false}>
+                  <BoutiquePage />
+                </PrivateRoute>
               }
             />
             <Route
+              path="dashboard/commandes"
+              element={
+                <PrivateRoute allowPending={false}>
+                  <MesCommandesPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="dashboard/messagerie"
+              element={
+                <PrivateRoute>
+                  <MessageriePage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="dashboard/adhesion"
+              element={
+                <PrivateRoute>
+                  <AdhesionPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="admin"
+              element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<AdminStatsPage />} />
+              <Route path="dossiers" element={<AdminDossiersPage />} />
+              <Route path="membres" element={<AdminMembresPage />} />
+              <Route path="moderation" element={<AdminModerationPage />} />
+              <Route path="audit" element={<AdminAuditPage />} />
+            </Route>
+            <Route
               path="*"
-              element={<PlaceholderPage title="Page introuvable" description="Cette route n'existe pas encore." />}
+              element={
+                <PlaceholderPage
+                  title="Page introuvable"
+                  description="Cette route n'existe pas. Retournez à l'accueil ou au tableau de bord."
+                />
+              }
             />
           </Route>
         </Routes>
