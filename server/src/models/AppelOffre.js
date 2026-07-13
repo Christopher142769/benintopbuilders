@@ -27,8 +27,8 @@ const appelOffreSchema = new mongoose.Schema(
     reponseRetenueId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReponseAO' },
     nbReponses: { type: Number, default: 0 },
     localisation: {
-      type: { type: String, enum: ['Point'], default: 'Point' },
-      coordinates: { type: [Number], default: undefined },
+      type: { type: String, enum: ['Point'] },
+      coordinates: { type: [Number] },
     },
   },
   { timestamps: true }

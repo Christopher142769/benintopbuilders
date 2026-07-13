@@ -13,6 +13,9 @@ import PaiementRetourPage from './pages/PaiementRetourPage';
 import AnnuairePage from './pages/AnnuairePage';
 import ProfilPublicPage from './pages/ProfilPublicPage';
 import MaFichePage from './pages/MaFichePage';
+import AppelsOffresPage from './pages/AppelsOffresPage';
+import MesAOPage from './pages/MesAOPage';
+import MesReponsesPage from './pages/MesReponsesPage';
 import LabellisationPage from './pages/LabellisationPage';
 import { PrivateRoute, GuestRoute, AdminRoute } from './components/auth/RouteGuards';
 
@@ -31,15 +34,7 @@ export default function App() {
             <Route index element={<HomePage />} />
             <Route path="annuaire" element={<AnnuairePage />} />
             <Route path="pro/:slug" element={<ProfilPublicPage />} />
-            <Route
-              path="appels-offres"
-              element={
-                <PlaceholderPage
-                  title="Appels d'offres"
-                  description="Publiez un besoin ou répondez aux chantiers ouverts."
-                />
-              }
-            />
+            <Route path="appels-offres" element={<AppelsOffresPage />} />
             <Route
               path="materiaux"
               element={
@@ -94,6 +89,22 @@ export default function App() {
               element={
                 <PrivateRoute allowPending={false}>
                   <LabellisationPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="dashboard/mes-ao"
+              element={
+                <PrivateRoute allowPending={false}>
+                  <MesAOPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="dashboard/mes-reponses"
+              element={
+                <PrivateRoute allowPending={false}>
+                  <MesReponsesPage />
                 </PrivateRoute>
               }
             />
