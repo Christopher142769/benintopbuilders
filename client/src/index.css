@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-fond text-ink font-body;
+  }
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-bleu rounded-md;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill px-6 py-3.5 text-sm font-extrabold transition
+      hover:-translate-y-0.5 active:translate-y-0;
+  }
+  .btn-orange {
+    @apply btn bg-orange text-white shadow-cta hover:bg-orange-dark;
+  }
+  .btn-ink {
+    @apply btn bg-ink text-white hover:shadow-soft;
+  }
+  .btn-line {
+    @apply btn border-[1.5px] border-black/15 bg-white text-ink hover:border-ink;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-bleu;
+  }
+  .eyebrow::before {
+    content: '';
+    @apply block h-px w-7 bg-bleu shrink-0;
+  }
+  .card {
+    @apply rounded-card border-[1.5px] border-card bg-white shadow-soft;
+  }
+  .filet {
+    border-color: rgba(29, 80, 200, 0.28);
+  }
+}
