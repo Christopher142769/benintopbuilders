@@ -13,6 +13,8 @@ const PUBLIC_PROJECTION = {
   localisation: 0,
   ifu: 0,
   rccm: 0,
+  rccmDocumentUrl: 0,
+  rccmDocumentNom: 0,
   __v: 0,
 };
 
@@ -105,6 +107,8 @@ export async function nearMembres({ lng, lat, maxDistance = 30000, limit = 50 })
         localisation: 0,
         ifu: 0,
         rccm: 0,
+        rccmDocumentUrl: 0,
+        rccmDocumentNom: 0,
         __v: 0,
       },
     },

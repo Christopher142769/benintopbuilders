@@ -126,9 +126,17 @@ async function dispatchSucces(paiement) {
     }
     case 'formation': {
       if (paiement.meta?.inscriptionFormationId) {
-        await InscriptionFormation.findByIdAndUpdate(paiement.meta.inscriptionFormationId, {
-          statut: 'confirmee',
-        });
+        const insc = await InscriptionFormation.findByIdAndUpdate(
+          paiement.meta.inscriptionFormationId,
+          { statut: 'confirmee' },
+          { new: true }
+        );
+        if (insc) {
+          const { Formation } = await import('../models/Formation.js');
+          await Formation.findByIdAndUpdate(insc.formationId, {
+            $inc: { placesRestantes: -insc.nbParticipants },
+          });
+        }
       }
       break;
     }
