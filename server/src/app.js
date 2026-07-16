@@ -5,7 +5,8 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { env } from './config/env.js';
+import fs from 'fs';
+import { env, isProd } from './config/env.js';
 import { logger } from './config/logger.js';
 import apiRoutes from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
@@ -59,6 +60,26 @@ export function createApp() {
   app.use('/uploads', express.static(uploadPath));
 
   app.use('/api', apiRoutes);
+
+  // En production (Hostinger Node.js Web App) : un seul processus sert l'API + le build React.
+  if (isProd) {
+    const clientDist = path.resolve(__dirname, '../../client/dist');
+    if (fs.existsSync(path.join(clientDist, 'index.html'))) {
+      app.use(express.static(clientDist, { index: false }));
+      app.get('*', (req, res, next) => {
+        if (
+          req.path.startsWith('/api') ||
+          req.path.startsWith('/uploads') ||
+          req.path.startsWith('/socket.io')
+        ) {
+          return next();
+        }
+        res.sendFile(path.join(clientDist, 'index.html'), (err) => {
+          if (err) next(err);
+        });
+      });
+    }
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

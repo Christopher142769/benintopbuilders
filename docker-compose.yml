@@ -1,5 +1,6 @@
-# Développement / preview local
-# Production Hostinger : docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# Développement / preview local uniquement.
+# Le déploiement en production (Hostinger) n'utilise pas Docker :
+# voir deploy/DEPLOY_HOSTINGER.md (Node + PM2 + Nginx natif).
 
 services:
   mongo:

@@ -1,42 +1,51 @@
-# Go-live Hostinger — checklist opérateur
+# Go-live Hostinger — checklist (Node.js Web App + GitHub)
 
-Ce fichier complète [`DEPLOY_HOSTINGER.md`](./DEPLOY_HOSTINGER.md).  
-Le déploiement réel se fait **sur votre VPS** (accès SSH requis).
+Checklist rapide pour **benintopbuilders.com** avec MongoDB déjà en ligne.
+Guide détaillé : [`DEPLOY_HOSTINGER.md`](./DEPLOY_HOSTINGER.md)
 
 ## Avant
 
-- [ ] VPS Hostinger créé (Ubuntu 22.04+)
-- [ ] IP VPS notée : `________________`
-- [ ] Domaine : `________________`
-- [ ] DNS A `@` → IP VPS (et optionnellement `www`)
-- [ ] Ports 80 / 443 ouverts
+- [ ] Plan Hostinger Business ou Cloud (Node.js Web App)
+- [ ] Dépôt GitHub à jour (`benintopbuilders`)
+- [ ] URI MongoDB en ligne prête (`MONGODB_URI`)
+- [ ] IP Hostinger autorisée dans MongoDB Atlas (Network Access)
+- [ ] Domaine **benintopbuilders.com** dans Hostinger
 
-## Sur le VPS
+## hPanel — création
+
+1. **Websites** → **Add Website** → **Node.js Web App**
+2. Domaine : **benintopbuilders.com**
+3. **Import Git Repository** → GitHub → repo `benintopbuilders` → branche `main`
+4. Build : `npm run build` · Start : `npm start` · Node **20**
+5. **Environment Variables** : copier depuis [`hostinger-hpanel.env.example`](./hostinger-hpanel.env.example)
+   - Remplacer `MONGODB_URI` par votre URI MongoDB en ligne
+   - Générer secrets : `bash deploy/generate-secrets.sh` (en local)
+   - `VITE_API_URL=/api` · `VITE_SOCKET_URL=` (vide)
+6. **Deploy**
+
+## Après le 1er déploiement
 
 ```bash
-ssh root@VOTRE_IP
-curl -fsSL https://get.docker.com | sh
-cd /opt && git clone https://github.com/Christopher142769/benintopbuilders.git
-cd benintopbuilders
-cp .env.example .env
-bash deploy/generate-secrets.sh
-nano .env   # DOMAIN + secrets + SMTP
-bash deploy/deploy.sh
-docker compose -f docker-compose.prod.yml exec server node src/jobs/seed.js
+# Terminal hPanel ou SSH — une seule fois
+node server/src/jobs/seed.js
 ```
 
 ## Validation
 
-- [ ] `curl -fsS https://VOTRE_DOMAINE/api/health` → JSON `success`
-- [ ] Landing accessible en HTTPS
-- [ ] `/admin/connexion` fonctionne
-- [ ] `/formateur/connexion` fonctionne
+- [ ] https://benintopbuilders.com charge la landing
+- [ ] https://benintopbuilders.com/api/health → `success: true`
+- [ ] https://benintopbuilders.com/admin/connexion fonctionne
 - [ ] Connexion superadmin OK
-- [ ] Upload logo / messagerie (Socket) OK
+- [ ] Messagerie (WebSocket) OK
+
+## Mises à jour
+
+```bash
+git push origin main   # redéploiement auto Hostinger
+```
 
 ## Après go-live
 
 - [ ] Changer le mot de passe superadmin
-- [ ] Configurer SMTP
-- [ ] Planifier `mongodump` quotidien
-- [ ] Activer FSPay quand prêt
+- [ ] SMTP réel dans hPanel
+- [ ] FSPay quand prêt

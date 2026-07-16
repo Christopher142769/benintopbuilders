@@ -3,14 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "description": "Bénin Top Builders — écosystème numérique du BTP au Bénin",
+  "main": "server/src/index.js",
   "scripts": {
     "dev": "concurrently -n client,server -c orange,blue \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
     "dev:client": "npm run dev --prefix client",
     "dev:server": "npm run dev --prefix server",
     "install:all": "npm install && npm install --prefix client && npm install --prefix server",
+    "postinstall": "npm install --prefix client && npm install --prefix server",
     "seed": "npm run seed --prefix server",
     "test": "npm run test --prefix server",
     "build": "npm run build --prefix client",
+    "start": "node server/src/index.js",
     "deploy:prod": "bash deploy/deploy.sh",
     "secrets": "bash deploy/generate-secrets.sh"
   },

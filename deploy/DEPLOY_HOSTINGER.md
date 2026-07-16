@@ -1,172 +1,209 @@
-# Déploiement Hostinger — VPS + Docker
+# Déploiement Hostinger — Node.js Web App + GitHub
 
-Guide pour mettre **Bénin Top Builders** en ligne sur un **VPS Hostinger** (Ubuntu 22.04+).  
-L’hébergement mutualisé / Business Web ne convient pas (Node, MongoDB, Socket.io).
+Guide pour héberger **Bénin Top Builders** sur l’offre **Node.js Web App** de Hostinger :
+connexion GitHub, déploiement automatique à chaque `git push`, domaine
+**benintopbuilders.com**, MongoDB **déjà en ligne** (Atlas ou autre).
 
-## Architecture
+> Ce guide correspond au flux **hPanel → Add Website → Node.js Web App → Import Git Repository**.
+> Pas besoin de Docker, PM2 manuel, ni d’installer MongoDB sur le serveur.
+
+## Option A — Hostinger Connector (depuis Cursor)
+
+Si vous avez installé **Hostinger Connector** dans Cursor :
+
+1. **Connecter le compte** : barre latérale Hostinger (icône H) → **Connect** / OAuth
+2. **Vérifier les outils MCP** : Cursor → **Settings** → **Tools & MCP** → serveurs `Hostinger Websites` en vert
+3. **Pousser le code** sur GitHub (`git push origin main`)
+4. Dans le chat Cursor, demander :
+   > Déploie benintopbuilders sur Hostinger, domaine benintopbuilders.com, build `npm run build`, start `npm start`, Node 20, framework Express
+5. **Configurer les variables d’environnement** dans hPanel (voir §3) — notamment `MONGODB_URI` et les secrets JWT
+6. **Redéployer** après avoir ajouté les variables
+
+Variables locales (non commitées) : `server/.env`  
+Pour afficher la liste à coller dans hPanel : `bash deploy/print-hpanel-env.sh`
+
+## Option B — hPanel manuel (GitHub)
+
 
 ```
-Internet → Caddy (:80/:443, HTTPS Let's Encrypt)
-              ↓
-         Nginx client (:80 dans Docker)  →  fichiers React
-              ↓ /api /uploads /socket.io
-         Express API (:5001)  →  MongoDB (réseau Docker privé)
+benintopbuilders.com (HTTPS géré par Hostinger)
+        │
+        ▼
+Node.js Web App (un seul processus Express)
+        ├─ /api/*, /uploads/*, /socket.io/*  → API + messagerie temps réel
+        └─ /*                                  → build React (client/dist)
+
+MongoDB en ligne (Atlas / Hostinger) ←── MONGODB_URI dans hPanel
 ```
 
-Fichiers clés :
+Hostinger installe les dépendances, exécute le build, démarre l’app et gère SSL/CDN.
+Le code du dépôt est prêt pour ce flux (`postinstall`, `build`, `start` à la racine).
 
-| Fichier | Rôle |
-|---------|------|
-| [`.env.example`](../.env.example) | Template secrets + domaine |
-| [`docker-compose.prod.yml`](../docker-compose.prod.yml) | Stack production |
-| [`deploy/Caddyfile`](./Caddyfile) | HTTPS automatique |
-| [`deploy/deploy.sh`](./deploy.sh) | Script de mise en ligne |
-| [`deploy/generate-secrets.sh`](./generate-secrets.sh) | Génération JWT / mots de passe |
+## Prérequis
 
-## Prérequis Hostinger
+- [ ] Plan Hostinger **Business** ou **Cloud** (Node.js Web App)
+- [ ] Dépôt GitHub : `Christopher142769/benintopbuilders` (ou le vôtre)
+- [ ] MongoDB en ligne avec URI de connexion (`mongodb+srv://...` ou `mongodb://...`)
+- [ ] Domaine **benintopbuilders.com** ajouté dans Hostinger (DNS)
 
-1. **VPS** (KVM 1 minimum recommandé : 1 vCPU, 4 Go RAM).
-2. **Domaine** pointant vers l’IP du VPS :
-   - enregistrement **A** `@` → IP du VPS ;
-   - enregistrement **A** `www` → IP du VPS (optionnel, redirigé vers l’apex).
-3. Ports **80** et **443** ouverts dans le firewall Hostinger / ufw.
-4. Accès **SSH** root ou sudo.
+### MongoDB en ligne
 
-## 1. Préparer le VPS
+Dans MongoDB Atlas (ou votre hébergeur MongoDB) :
+
+1. Créer une base `benin-top-builders` (ou utiliser le nom dans l’URI)
+2. Créer un utilisateur avec mot de passe
+3. **Network Access** : autoriser l’accès depuis Hostinger
+   - Option rapide : `0.0.0.0/0` (toutes IP) — acceptable si mot de passe fort
+   - Option stricte : IP du serveur Hostinger (visible dans hPanel après 1er déploiement)
+4. Copier l’URI complète → variable `MONGODB_URI` dans hPanel
+
+## 1. Créer l’application Node.js dans hPanel
+
+1. **hPanel** → **Websites** → **Add Website**
+2. Choisir **Node.js Web App**
+3. Sélectionner le domaine **benintopbuilders.com** (ou domaine temporaire puis bascule)
+4. **Import Git Repository** → autoriser GitHub → sélectionner le dépôt `benintopbuilders`
+5. Branche : `main` (ou `master`)
+
+## 2. Commandes de build (Settings)
+
+Vérifier / renseigner dans **Settings & Redeploy** :
+
+| Champ | Valeur |
+|-------|--------|
+| **Framework** | Express.js (ou détection auto) |
+| **Node.js version** | 20 |
+| **Root directory** | `.` (racine du dépôt) |
+| **Package manager** | npm |
+| **Install command** | *(laisser vide — `npm install` à la racine + `postinstall`)* |
+| **Build command** | `npm run build` |
+| **Start command** | `npm start` |
+| **Entry file** | `server/src/index.js` |
+
+Le `postinstall` du `package.json` installe automatiquement `client/` et `server/`.
+Le `build` compile le React dans `client/dist`.
+Le `start` lance l’API qui sert aussi le frontend en production.
+
+## 3. Variables d’environnement (hPanel)
+
+**Environment Variables** → ajouter toutes les variables **avant le premier Deploy**.
+
+Modèle complet : [`deploy/hostinger-hpanel.env.example`](./hostinger-hpanel.env.example)
+
+Générer les secrets en local :
 
 ```bash
-ssh root@VOTRE_IP_VPS
-
-apt update && apt upgrade -y
-apt install -y ca-certificates curl git openssl
-
-# Docker (officiel)
-curl -fsSL https://get.docker.com | sh
-systemctl enable --now docker
-
-# Pare-feu
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw --force enable
+bash deploy/generate-secrets.sh
 ```
 
-## 2. Cloner le projet
+### Variables essentielles
+
+| Variable | Exemple / valeur |
+|----------|------------------|
+| `NODE_ENV` | `production` |
+| `CLIENT_URL` | `https://benintopbuilders.com` |
+| `CORS_ORIGINS` | `https://benintopbuilders.com,https://www.benintopbuilders.com` |
+| `MONGODB_URI` | Votre URI MongoDB en ligne |
+| `JWT_ACCESS_SECRET` | Secret généré (min. 32 caractères) |
+| `JWT_REFRESH_SECRET` | Secret généré (min. 32 caractères) |
+| `VITE_API_URL` | `/api` |
+| `VITE_SOCKET_URL` | *(vide — même domaine)* |
+| `VITE_APP_NAME` | `Bénin Top Builders` |
+| `SEED_SUPERADMIN_EMAIL` | `superadmin@benintopbuilders.com` |
+| `SEED_SUPERADMIN_PASSWORD` | Mot de passe fort |
+
+> **Important** : les variables `VITE_*` doivent être définies **avant** le build.
+> Si vous les modifiez après coup : **Settings & Redeploy** → redéployer.
+
+Hostinger injecte ces variables dans `process.env` — pas besoin de fichier `.env` sur le serveur.
+
+## 4. Lier le domaine benintopbuilders.com
+
+1. hPanel → votre site Node.js → **Domain** / **Connect domain**
+2. Sélectionner **benintopbuilders.com**
+3. Vérifier les DNS (souvent déjà OK si le domaine est chez Hostinger) :
+   - `A` `@` → IP Hostinger
+   - `CNAME` `www` → `benintopbuilders.com` (ou enregistrement fourni par Hostinger)
+4. SSL : activé automatiquement par Hostinger (Let's Encrypt)
+
+Propagation DNS : quelques minutes à 24 h.
+
+## 5. Premier déploiement
+
+1. Cliquer **Deploy**
+2. Suivre les logs : install → build client → start
+3. Ouvrir `https://benintopbuilders.com/api/health` → doit retourner `{"success":true,...}`
+
+En cas d’échec, consulter **Deployments** → log complet (souvent : `MONGODB_URI` invalide ou variables `VITE_*` manquantes).
+
+## 6. Créer le superadmin (une fois)
+
+Après un déploiement réussi, exécuter le seed **une seule fois** :
+
+**Option A — Terminal hPanel** (si disponible sur votre plan) :
 
 ```bash
-mkdir -p /opt && cd /opt
-git clone git@github.com:Christopher142769/benintopbuilders.git
-# ou : git clone https://github.com/Christopher142769/benintopbuilders.git
-cd benintopbuilders
+cd server
+node src/jobs/seed.js
 ```
 
-## 3. Configurer l’environnement
+**Option B — SSH** (VPS ou accès SSH Hostinger) :
 
 ```bash
-cp .env.example .env
-bash deploy/generate-secrets.sh   # affiche des secrets à coller dans .env
-nano .env
+# depuis la racine du projet déployé
+node server/src/jobs/seed.js
 ```
 
-À renseigner obligatoirement dans `.env` :
+Le seed utilise `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` des variables hPanel.
+Il ne crée **que** le superadmin — annuaire, AO, marketplace et formations restent vides.
 
-- `DOMAIN` — ex. `benintopbuilders.bj` (sans `https://`)
-- `PUBLIC_URL` / `CLIENT_URL` / `CORS_ORIGINS` / `FSPAY_CALLBACK_URL` — avec `https://`
-- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `FSPAY_WEBHOOK_SECRET`
-- `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD`
-- SMTP Hostinger si disponible (`SMTP_USER` / `SMTP_PASS`)
+Connexion admin : `https://benintopbuilders.com/admin/connexion`
 
-## 4. Déployer
+## 7. Mises à jour (workflow Git)
+
+Chaque push sur la branche connectée redéploie automatiquement :
 
 ```bash
-chmod +x deploy/deploy.sh deploy/generate-secrets.sh
-bash deploy/deploy.sh
+git add .
+git commit -m "Mise à jour plateforme"
+git push origin main
 ```
 
-Ou manuellement :
+Hostinger : pull → `npm install` → `npm run build` → `npm start`.
 
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-```
+## URLs de production
 
-Attendre ~1–2 minutes (certificat Let's Encrypt + build).
-
-## 5. Seed du superadmin (une fois)
-
-```bash
-docker compose -f docker-compose.prod.yml exec server node src/jobs/seed.js
-```
-
-⚠️ Le seed **vide** les collections métier puis recrée le superadmin. Ne l’exécuter qu’au premier déploiement (ou en connaissance de cause).
-
-## 6. Vérifications
-
-```bash
-# Conteneurs
-docker compose -f docker-compose.prod.yml ps
-
-# Health API
-docker compose -f docker-compose.prod.yml exec server \
-  node -e "fetch('http://127.0.0.1:5001/api/health').then(r=>r.json()).then(console.log)"
-
-# Depuis l’extérieur
-curl -fsS https://VOTRE_DOMAINE/api/health
-```
-
-URLs :
-
-- Site : `https://VOTRE_DOMAINE/`
-- Admin : `https://VOTRE_DOMAINE/admin/connexion`
-- Formateur : `https://VOTRE_DOMAINE/formateur/connexion`
-
-## 7. Mises à jour ultérieures
-
-```bash
-cd /opt/benintopbuilders
-git pull
-bash deploy/deploy.sh
-```
-
-Les volumes `mongo_data` et `uploads_data` sont conservés.
-
-## 8. Sauvegardes MongoDB
-
-```bash
-# Dump
-docker compose -f docker-compose.prod.yml exec -T mongo \
-  mongodump --archive --db=benin-top-builders > backup-$(date +%F).archive
-
-# Restore (exemple)
-cat backup-YYYY-MM-DD.archive | docker compose -f docker-compose.prod.yml exec -T mongo \
-  mongorestore --archive --drop --db=benin-top-builders
-```
-
-Planifier un cron quotidien sur le VPS (ex. `/etc/cron.daily/btb-mongo`).
-
-## 9. Checklist production
-
-- [ ] DNS A propagé vers le VPS
-- [ ] HTTPS valide (cadenas navigateur)
-- [ ] Secrets JWT / FSPay changés (plus de `CHANGE_ME`)
-- [ ] SMTP réel configuré (OTP / mails)
-- [ ] `CORS_ORIGINS` limité au domaine public
-- [ ] Superadmin seedé et mot de passe changé
-- [ ] Sauvegarde Mongo planifiée
-- [ ] FSPay : `FSPAY_BASE_URL` + clés + webhook HTTPS quand prêt
+| Page | URL |
+|------|-----|
+| Accueil | https://benintopbuilders.com |
+| API health | https://benintopbuilders.com/api/health |
+| Admin | https://benintopbuilders.com/admin/connexion |
+| Formateur | https://benintopbuilders.com/formateur/connexion |
 
 ## Dépannage
 
-| Symptôme | Piste |
-|----------|--------|
-| Certificat Let's Encrypt échoue | DNS pas encore pointé, ports 80/443 fermés, `DOMAIN` incorrect |
-| 502 Bad Gateway | `docker compose … logs server` / `logs client` |
-| CORS / cookies | `CLIENT_URL` et `CORS_ORIGINS` en `https://…` |
-| Socket messagerie KO | Vérifier `/socket.io/` via Caddy → Nginx → API |
-| Mongo inaccessible | Ne pas exposer 27017 ; URI `mongodb://mongo:27017/...` |
+| Symptôme | Solution |
+|----------|----------|
+| Build échoue sur `vite` | Vérifier `VITE_API_URL=/api` dans les variables d’environnement |
+| Page blanche, API OK | Redéployer après avoir ajouté les `VITE_*` ; vérifier les logs de build |
+| `MongoServerError` / timeout DB | Vérifier `MONGODB_URI` ; autoriser l’IP Hostinger dans MongoDB Atlas |
+| 401 / CORS | `CLIENT_URL` et `CORS_ORIGINS` doivent être en `https://benintopbuilders.com` |
+| Socket.io ne connecte pas | `VITE_SOCKET_URL` doit rester **vide** (même origine) |
+| Uploads perdus après redeploy | Les fichiers dans `server/uploads/` peuvent être éphémères selon le plan — prévoir stockage persistant ou S3 si besoin |
 
-Logs :
+## Checklist go-live
 
-```bash
-docker compose -f docker-compose.prod.yml logs -f --tail=100 caddy
-docker compose -f docker-compose.prod.yml logs -f --tail=100 server
-```
+- [ ] Variables hPanel complètes (voir `hostinger-hpanel.env.example`)
+- [ ] `MONGODB_URI` testée depuis Atlas
+- [ ] Domaine benintopbuilders.com actif en HTTPS
+- [ ] `/api/health` OK
+- [ ] Seed superadmin exécuté
+- [ ] Connexion admin OK
+- [ ] Changer le mot de passe superadmin après 1ère connexion
+- [ ] Configurer SMTP réel (sinon OTP visible à l’écran)
+- [ ] Activer FSPay quand le paiement est prêt
+
+## Alternative : VPS (accès root)
+
+Si vous préférez un VPS avec PM2 + Nginx manuel (sans GitHub auto-deploy Hostinger),
+voir le script [`deploy/deploy.sh`](./deploy.sh) et [`deploy/nginx-hostinger.conf`](./nginx-hostinger.conf).

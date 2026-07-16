@@ -47,10 +47,11 @@ Le seed ne crée **pas** de contenu fictif : annuaire, appels d’offres, matér
 | `npm run seed` | Jeu de données |
 | `npm test` | Jest + Supertest |
 | `npm run build` | Build client |
-| `npm run secrets` | Génère des secrets JWT pour `.env` |
-| `npm run deploy:prod` | Déploie via Docker Compose prod |
+| `npm start` | Démarre l'API (sert aussi le frontend en production) |
+| `npm run secrets` | Génère des secrets JWT/FSPay pour hPanel / `server/.env` |
+| `npm run deploy:prod` | Déploiement manuel VPS (PM2 + Nginx, optionnel) |
 
-## Docker (local)
+## Docker (optionnel, aperçu local uniquement)
 
 ```bash
 docker compose up --build
@@ -58,38 +59,37 @@ docker compose up --build
 
 Client nginx : http://localhost:8080 · API : http://localhost:5001
 
-## Mise en ligne Hostinger (VPS)
+## Mise en ligne Hostinger — Node.js Web App + GitHub
 
-Stack recommandée : **VPS Ubuntu + Docker Compose + Caddy (HTTPS)**.
+Méthode recommandée : **hPanel → Node.js Web App → Import Git Repository**,
+domaine **benintopbuilders.com**, MongoDB **déjà en ligne** (Atlas, etc.).
 
-Guide complet : [`deploy/DEPLOY_HOSTINGER.md`](deploy/DEPLOY_HOSTINGER.md)
+Guide complet : [`deploy/DEPLOY_HOSTINGER.md`](deploy/DEPLOY_HOSTINGER.md) ·
+Checklist : [`deploy/GO_LIVE.md`](deploy/GO_LIVE.md) ·
+Variables hPanel : [`deploy/hostinger-hpanel.env.example`](deploy/hostinger-hpanel.env.example)
 
-Résumé :
+Résumé hPanel :
 
-```bash
-# Sur le VPS
-git clone https://github.com/Christopher142769/benintopbuilders.git
-cd benintopbuilders
-cp .env.example .env
-bash deploy/generate-secrets.sh   # coller les secrets dans .env
-nano .env                         # DOMAIN, SMTP, etc.
-bash deploy/deploy.sh
-docker compose -f docker-compose.prod.yml exec server node src/jobs/seed.js
-```
+| Champ | Valeur |
+|-------|--------|
+| Build command | `npm run build` |
+| Start command | `npm start` |
+| Node.js | 20 |
+| Variables | `MONGODB_URI`, `JWT_*`, `VITE_API_URL=/api`, `CLIENT_URL`, etc. |
 
-L’hébergement mutualisé Hostinger n’est **pas** adapté (API Node, MongoDB, WebSocket).
+Chaque `git push` sur `main` redéploie automatiquement.
 
 ## Mise en production (checklist)
 
-- [ ] VPS Hostinger + DNS A vers l’IP
-- [ ] HTTPS (Caddy / Let's Encrypt via `docker-compose.prod.yml`)
-- [ ] Secrets JWT / FSPay / webhook HMAC réels (`.env`)
-- [ ] SMTP réel (plus de mode console)
-- [ ] `FSPAY_BASE_URL` + clés API quand le paiement est actif
-- [ ] Sauvegardes MongoDB planifiées
-- [ ] Monitoring des crons (clôture AO, stocks, adhésion 06:00)
-- [ ] `CORS_ORIGINS` restreint au domaine public
-- [ ] Uploads hors git, volume Docker `uploads_data`
+- [ ] Variables hPanel complètes (`deploy/hostinger-hpanel.env.example`)
+- [ ] `MONGODB_URI` → base MongoDB en ligne + IP Hostinger autorisée
+- [ ] Domaine benintopbuilders.com en HTTPS
+- [ ] `/api/health` OK
+- [ ] Seed superadmin exécuté une fois (`node server/src/jobs/seed.js`)
+- [ ] Secrets JWT / FSPay réels
+- [ ] SMTP réel (sinon OTP visible à l'écran)
+- [ ] `FSPAY_BASE_URL` + clés quand le paiement est actif
+- [ ] `CORS_ORIGINS` = `https://benintopbuilders.com,https://www.benintopbuilders.com`
 
 ## Formules d'adhésion (annuel, FCFA)
 
