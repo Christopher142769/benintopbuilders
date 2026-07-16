@@ -1,3 +1,6 @@
+# Développement / preview local
+# Production Hostinger : docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
 services:
   mongo:
     image: mongo:7
@@ -14,7 +17,7 @@ services:
       NODE_ENV: production
       PORT: 5001
       MONGODB_URI: mongodb://mongo:27017/benin-top-builders
-      CLIENT_URL: http://localhost:5173
+      CLIENT_URL: http://localhost:8080
       CORS_ORIGINS: http://localhost:5173,http://localhost:8080
       JWT_ACCESS_SECRET: change-me-access-secret-min-32-chars!!
       JWT_REFRESH_SECRET: change-me-refresh-secret-min-32-chars!
@@ -28,7 +31,12 @@ services:
       - uploads_data:/app/uploads
 
   client:
-    build: ./client
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: /api
+        VITE_SOCKET_URL: ''
+        VITE_APP_NAME: Bénin Top Builders
     restart: unless-stopped
     ports:
       - '8080:80'

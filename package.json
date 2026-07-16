@@ -10,7 +10,9 @@
     "install:all": "npm install && npm install --prefix client && npm install --prefix server",
     "seed": "npm run seed --prefix server",
     "test": "npm run test --prefix server",
-    "build": "npm run build --prefix client"
+    "build": "npm run build --prefix client",
+    "deploy:prod": "bash deploy/deploy.sh",
+    "secrets": "bash deploy/generate-secrets.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

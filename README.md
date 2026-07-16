@@ -47,14 +47,49 @@ Le seed ne crée **pas** de contenu fictif : annuaire, appels d’offres, matér
 | `npm run seed` | Jeu de données |
 | `npm test` | Jest + Supertest |
 | `npm run build` | Build client |
+| `npm run secrets` | Génère des secrets JWT pour `.env` |
+| `npm run deploy:prod` | Déploie via Docker Compose prod |
 
-## Docker
+## Docker (local)
 
 ```bash
 docker compose up --build
 ```
 
 Client nginx : http://localhost:8080 · API : http://localhost:5001
+
+## Mise en ligne Hostinger (VPS)
+
+Stack recommandée : **VPS Ubuntu + Docker Compose + Caddy (HTTPS)**.
+
+Guide complet : [`deploy/DEPLOY_HOSTINGER.md`](deploy/DEPLOY_HOSTINGER.md)
+
+Résumé :
+
+```bash
+# Sur le VPS
+git clone https://github.com/Christopher142769/benintopbuilders.git
+cd benintopbuilders
+cp .env.example .env
+bash deploy/generate-secrets.sh   # coller les secrets dans .env
+nano .env                         # DOMAIN, SMTP, etc.
+bash deploy/deploy.sh
+docker compose -f docker-compose.prod.yml exec server node src/jobs/seed.js
+```
+
+L’hébergement mutualisé Hostinger n’est **pas** adapté (API Node, MongoDB, WebSocket).
+
+## Mise en production (checklist)
+
+- [ ] VPS Hostinger + DNS A vers l’IP
+- [ ] HTTPS (Caddy / Let's Encrypt via `docker-compose.prod.yml`)
+- [ ] Secrets JWT / FSPay / webhook HMAC réels (`.env`)
+- [ ] SMTP réel (plus de mode console)
+- [ ] `FSPAY_BASE_URL` + clés API quand le paiement est actif
+- [ ] Sauvegardes MongoDB planifiées
+- [ ] Monitoring des crons (clôture AO, stocks, adhésion 06:00)
+- [ ] `CORS_ORIGINS` restreint au domaine public
+- [ ] Uploads hors git, volume Docker `uploads_data`
 
 ## Formules d'adhésion (annuel, FCFA)
 
@@ -76,14 +111,3 @@ Client nginx : http://localhost:8080 · API : http://localhost:5001
 6. **Messagerie** — Contacter depuis fiche ; contacts masqués si non actifs  
 7. **Adhésion** — Renouvellement auto / historique `/dashboard/adhesion`  
 8. **Admin** — Stats, membres, moderation, audit  
-
-## Mise en production (checklist)
-
-- [ ] HTTPS (reverse proxy)
-- [ ] Secrets JWT / FSPay / webhook HMAC réels
-- [ ] SMTP réel (plus de mode console)
-- [ ] `FSPAY_BASE_URL` + clés API
-- [ ] Sauvegardes MongoDB planifiées
-- [ ] Monitoring des crons (clôture AO, stocks, adhésion 06:00)
-- [ ] `CORS_ORIGINS` restreint au domaine public
-- [ ] Uploads hors git, volume persistant
