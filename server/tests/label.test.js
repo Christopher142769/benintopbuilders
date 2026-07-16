@@ -6,6 +6,7 @@ import { DossierLabel } from '../src/models/DossierLabel.js';
 import { Paiement } from '../src/models/Paiement.js';
 import { hashPassword } from '../src/utils/crypto.js';
 import { traiterWebhook } from '../src/services/paiement.service.js';
+import { LabelFormulaire } from '../src/models/LabelFormulaire.js';
 
 beforeAll(async () => {
   await connectMongo();
@@ -31,6 +32,12 @@ describe('Labellisation — machine à états', () => {
     await User.deleteMany({ email: 'label@example.bj' });
     await DossierLabel.deleteMany({});
     await Paiement.deleteMany({ type: 'labellisation' });
+    await LabelFormulaire.deleteMany({ niveau: 'bronze' });
+    await LabelFormulaire.create({
+      niveau: 'bronze',
+      titre: 'Formulaire Bronze',
+      champs: [{ key: 'ifu', label: 'IFU', type: 'text', required: true }],
+    });
 
     const user = await User.create({
       email: 'label@example.bj',
@@ -51,6 +58,7 @@ describe('Labellisation — machine à états', () => {
     const { dossier, paiement } = await creerDossier(user, {
       niveauDemande: 'bronze',
       pieces: [{ type: 'ifu', url: '/uploads/dossiers/ifu.webp' }],
+      valeurs: { ifu: '123456789' },
     });
 
     expect(dossier.statut).toBe('soumis');
@@ -73,5 +81,40 @@ describe('Labellisation — machine à états', () => {
     await expect(
       transitionDossier(dossier._id, { to: 'soumis', adminId: user._id })
     ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('inclut les frais de label pour un abonnement payant', async () => {
+    await DossierLabel.deleteMany({});
+    await LabelFormulaire.deleteMany({ niveau: 'argent' });
+    await LabelFormulaire.create({
+      niveau: 'argent',
+      titre: 'Formulaire Argent',
+      champs: [{ key: 'experience', label: 'Expérience', type: 'number', required: true }],
+    });
+    const user = await User.create({
+      email: `label-paid-${Date.now()}@example.bj`,
+      passwordHash: await hashPassword('Password123!'),
+      role: 'membre',
+      statut: 'actif',
+      palier: 'standard',
+      profilType: 'entreprise_btp',
+      prenom: 'Membre',
+      nom: 'Payant',
+      telephone: `+229${Date.now().toString().slice(-8)}`,
+      entreprise: `Payant ${Date.now()}`,
+      departement: 'Littoral',
+      ville: 'Cotonou',
+      slug: `payant-${Date.now()}`,
+    });
+
+    const result = await creerDossier(user, {
+      niveauDemande: 'argent',
+      valeurs: { experience: '8' },
+    });
+
+    expect(result.needsPayment).toBe(false);
+    expect(result.fraisInclusAbonnement).toBe(true);
+    expect(result.dossier.reponses[0].valeur).toBe(8);
+    expect(result.dossier.paiementId).toBeUndefined();
   });
 });

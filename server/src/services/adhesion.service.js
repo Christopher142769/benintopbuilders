@@ -70,7 +70,18 @@ export async function runAdhesionLifecycle(now = new Date()) {
     adhesionExpireAt: { $gte: j0Start, $lt: j0End },
   });
   for (const u of aEcheance) {
-    const montant = TARIFS_FCFA.adhesion[u.palier] || 0;
+    const montant = TARIFS_FCFA.adhesion[u.palier];
+    if (montant == null) {
+      await Notification.create({
+        userId: u._id,
+        type: 'adhesion_paiement',
+        titre: 'Offre Business à renouveler',
+        corps: 'Votre formule Business arrive à échéance. Un conseiller vous recontacte pour le devis.',
+        lien: '/dashboard/adhesion',
+      });
+      await audit('adhesion.business_j0', { userId: u._id });
+      continue;
+    }
     if (u.renewalAuto && montant > 0) {
       await initierPaiement({
         userId: u._id,

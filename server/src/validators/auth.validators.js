@@ -55,3 +55,22 @@ export const resetPasswordSchema = z.object({
     .regex(/[A-Z]/)
     .regex(/[0-9]/),
 });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
+    newPassword: z
+      .string()
+      .min(8, '8 caractères minimum')
+      .regex(/[A-Z]/, 'Au moins une majuscule')
+      .regex(/[0-9]/, 'Au moins un chiffre'),
+    confirmPassword: z.string().min(1),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Les nouveaux mots de passe ne correspondent pas',
+    path: ['confirmPassword'],
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: 'Le nouveau mot de passe doit être différent',
+    path: ['newPassword'],
+  });

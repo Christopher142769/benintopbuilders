@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import * as mkt from '../services/marketplace.service.js';
 import { z } from 'zod';
 import { CATEGORIES_MATERIAUX } from '../config/constants.js';
+import { saveResizedImage } from '../services/upload.service.js';
 
 const produitSchema = z.object({
   nom: z.string().min(2).max(160),
@@ -27,20 +28,38 @@ export const mesProduits = asyncHandler(async (req, res) => {
 });
 
 export const createProduit = asyncHandler(async (req, res) => {
+  const uploadedPhoto = req.file
+    ? await saveResizedImage(req.file.buffer, {
+        folder: 'produits',
+        maxSize: 1400,
+        filenamePrefix: 'produit',
+        mimetype: req.file.mimetype,
+      })
+    : null;
   const body = produitSchema.parse({
     ...req.body,
     prixUnitaire: Number(req.body.prixUnitaire),
     stock: Number(req.body.stock),
+    photos: uploadedPhoto ? [uploadedPhoto] : [],
   });
   const p = await mkt.upsertProduit(req.user, body);
   return created(res, p, 'Produit créé');
 });
 
 export const updateProduit = asyncHandler(async (req, res) => {
+  const uploadedPhoto = req.file
+    ? await saveResizedImage(req.file.buffer, {
+        folder: 'produits',
+        maxSize: 1400,
+        filenamePrefix: 'produit',
+        mimetype: req.file.mimetype,
+      })
+    : null;
   const body = produitSchema.partial().parse({
     ...req.body,
     ...(req.body.prixUnitaire != null ? { prixUnitaire: Number(req.body.prixUnitaire) } : {}),
     ...(req.body.stock != null ? { stock: Number(req.body.stock) } : {}),
+    ...(uploadedPhoto ? { photos: [uploadedPhoto] } : {}),
   });
   const p = await mkt.upsertProduit(req.user, body, req.params.id);
   return ok(res, p, 'Produit mis à jour');
@@ -68,6 +87,7 @@ const commandeSchema = z.object({
     quartier: z.string().optional(),
     details: z.string().optional(),
   }),
+  message: z.string().max(2000).optional(),
 });
 
 export const createCommande = asyncHandler(async (req, res) => {
@@ -85,7 +105,9 @@ export const mesVentes = asyncHandler(async (req, res) => {
 });
 
 export const setStatut = asyncHandler(async (req, res) => {
-  const to = z.enum(['payee', 'en_preparation', 'livree', 'annulee']).parse(req.body.statut);
+  const to = z
+    .enum(['prise_de_contact', 'finalisee', 'annulee'])
+    .parse(req.body.statut);
   const c = await mkt.transitionCommande(req.params.id, req.user, to);
   return ok(res, c, 'Statut mis à jour');
 });

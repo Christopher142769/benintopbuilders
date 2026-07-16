@@ -4,6 +4,7 @@ import * as aoService from '../services/ao.service.js';
 import { z } from 'zod';
 import { DEPARTEMENTS, METIERS } from '../config/constants.js';
 import { optionalAuth, authenticate, requireStatut } from '../middlewares/auth.js';
+import { saveDocument } from '../services/upload.service.js';
 
 const createSchema = z.object({
   titre: z.string().min(5).max(200),
@@ -59,6 +60,13 @@ export const repondre = asyncHandler(async (req, res) => {
     montant: Number(req.body.montant),
     delaiJours: Number(req.body.delaiJours),
   });
+  if (req.file) {
+    const saved = await saveDocument(req.file, {
+      folder: 'ao',
+      filenamePrefix: 'dossier-reponse',
+    });
+    body.piecesJointes = [saved.url];
+  }
   const reponse = await aoService.deposerReponse(req.user, req.params.id, body);
   return created(res, reponse, 'Réponse déposée');
 });

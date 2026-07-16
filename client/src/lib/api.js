@@ -8,6 +8,11 @@ const api = axios.create({
 
 let accessToken = null;
 let refreshPromise = null;
+let sessionHandler = null;
+
+export function setSessionHandler(handler) {
+  sessionHandler = handler;
+}
 
 export function setAccessToken(token) {
   accessToken = token;
@@ -40,7 +45,9 @@ api.interceptors.response.use(
             )
             .then((res) => {
               const token = res.data?.data?.accessToken;
+              const user = res.data?.data?.user;
               setAccessToken(token || null);
+              sessionHandler?.(user || null, token || null);
               return token;
             })
             .finally(() => {
@@ -53,6 +60,7 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         setAccessToken(null);
+        sessionHandler?.(null, null);
       }
     }
     return Promise.reject(error);

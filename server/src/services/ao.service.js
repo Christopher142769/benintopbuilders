@@ -26,6 +26,12 @@ export async function createAO(auteur, payload) {
   if (auteur.statut !== 'actif') {
     throw new AppError('Compte actif requis', { status: 403, code: 'FORBIDDEN' });
   }
+  if (auteur.palier === 'decouverte') {
+    throw new AppError('La publication d’appels d’offres est disponible dès la formule Standard', {
+      status: 403,
+      code: 'STANDARD_REQUIRED',
+    });
+  }
   const publishedAt = new Date();
   const ao = await AppelOffre.create({
     ...payload,

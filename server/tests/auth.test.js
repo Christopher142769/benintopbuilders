@@ -5,6 +5,7 @@ import { connectMongo } from '../src/config/db.js';
 import { User } from '../src/models/User.js';
 import { Otp } from '../src/models/Otp.js';
 import { __devOtpStore } from '../src/services/auth.service.js';
+import { hashPassword } from '../src/utils/crypto.js';
 
 const app = createApp();
 
@@ -134,5 +135,45 @@ describe('Parcours adhésion register → otp → charte → login', () => {
     const again = await registerRequest();
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('EMAIL_EXISTS');
+  });
+});
+
+describe('Modification du mot de passe connecté', () => {
+  it('vérifie le mot de passe actuel et invalide l’ancien', async () => {
+    await User.create({
+      email: 'securite@example.bj',
+      passwordHash: await hashPassword('Password123!'),
+      role: 'admin',
+      statut: 'actif',
+      prenom: 'Admin',
+      nom: 'Sécurité',
+      telephone: '+22997000009',
+      departement: 'Littoral',
+      ville: 'Cotonou',
+    });
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'securite@example.bj', password: 'Password123!' });
+
+    const changed = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${login.body.data.accessToken}`)
+      .send({
+        currentPassword: 'Password123!',
+        newPassword: 'Nouveau456!',
+        confirmPassword: 'Nouveau456!',
+      });
+    expect(changed.status).toBe(200);
+
+    const oldLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'securite@example.bj', password: 'Password123!' });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'securite@example.bj', password: 'Nouveau456!' });
+    expect(newLogin.status).toBe(200);
+    expect(newLogin.body.data.redirect).toBe('/admin');
   });
 });

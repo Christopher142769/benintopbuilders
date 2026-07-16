@@ -5,6 +5,7 @@ import { io } from 'socket.io-client';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { EmptyState, PageHeader } from '../components/ui/PageKit';
 
 export default function MessageriePage() {
   const user = useAuthStore((s) => s.user);
@@ -17,6 +18,7 @@ export default function MessageriePage() {
 
   const { data: convs = [] } = useQuery({
     queryKey: ['convs'],
+    enabled: !!token,
     queryFn: async () => (await api.get('/messagerie')).data.data,
     refetchInterval: 20000,
   });
@@ -30,10 +32,11 @@ export default function MessageriePage() {
 
   useEffect(() => {
     if (!token) return undefined;
-    const socket = io('/', {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
     });
     if (activeId) {
       socket.emit('conv:join', activeId);
@@ -62,10 +65,25 @@ export default function MessageriePage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-[280px_1fr] md:px-8">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader
+        eyebrow="Conversations professionnelles"
+        title="Échangez sans perdre le fil."
+        description="Centralisez vos discussions avec les clients, fournisseurs et partenaires de la plateforme."
+        stats={[
+          { label: 'Conversations', value: convs.length },
+          { label: 'Non lus', value: convs.reduce((sum, conv) => sum + (conv.nonLus?.[user?._id] || 0), 0) },
+          { label: 'Connexion', value: 'Temps réel' },
+        ]}
+      />
+      <div className="grid min-h-[560px] gap-4 md:grid-cols-[320px_1fr]">
       <aside className="card max-h-[70vh] overflow-y-auto p-3">
-        <h1 className="px-2 font-display text-xl font-extrabold">Messagerie</h1>
+        <div className="border-b border-filet px-2 pb-3">
+          <h2 className="font-display text-xl font-extrabold">Conversations</h2>
+          <p className="mt-1 text-xs text-gris">Vos échanges récents</p>
+        </div>
         <ul className="mt-3 space-y-1">
+          {convs.length === 0 && <li className="px-3 py-8 text-center text-xs leading-5 text-gris">Aucune conversation pour le moment.</li>}
           {convs.map((c) => {
             const other = c.participants?.find((p) => p._id !== user?._id);
             const unread = c.nonLus?.[user?._id] || 0;
@@ -92,8 +110,12 @@ export default function MessageriePage() {
         </ul>
       </aside>
 
-      <section className="card flex max-h-[70vh] flex-col p-4">
-        {!activeId && <p className="m-auto text-sm text-black/55">Sélectionnez une conversation</p>}
+      <section className="card flex max-h-[70vh] flex-col overflow-hidden p-4">
+        {!activeId && (
+          <div className="m-auto w-full max-w-md">
+            <EmptyState title="Choisissez une conversation" description="Sélectionnez un contact à gauche pour consulter les messages." icon="✦" />
+          </div>
+        )}
         {activeId && (
           <>
             <div className="flex-1 space-y-2 overflow-y-auto">
@@ -115,7 +137,7 @@ export default function MessageriePage() {
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                className="flex-1 rounded-2xl border px-4 py-3 text-sm"
+                className="input flex-1"
                 placeholder="Votre message…"
               />
               <button type="submit" className="btn-orange !px-4">
@@ -125,6 +147,7 @@ export default function MessageriePage() {
           </>
         )}
       </section>
+      </div>
     </div>
   );
 }

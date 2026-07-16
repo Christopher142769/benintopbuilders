@@ -36,7 +36,8 @@ npm run dev           # client :5173 + API :5001
 | Rôle | E-mail | Mot de passe |
 |------|--------|--------------|
 | Superadmin | `superadmin@benintopbuilders.bj` (ou `SEED_SUPERADMIN_*`) | `ChangeMeSuperAdmin1!` (env) |
-| Membres seed | divers `@…` du seed | `Password123!` |
+
+Le seed ne crée **pas** de contenu fictif : annuaire, appels d’offres, matériaux et formations restent vides jusqu’à publication via le dashboard / admin.
 
 ## Scripts
 
@@ -55,12 +56,22 @@ docker compose up --build
 
 Client nginx : http://localhost:8080 · API : http://localhost:5001
 
+## Formules d'adhésion (annuel, FCFA)
+
+| Formule | Tarif | Droits principaux |
+|---------|-------|-------------------|
+| Découverte | 0 | Profil de base, annuaire, 2 candidatures AO / mois |
+| Standard | 200 000 | Profil complet, AO illimités, messagerie, alertes |
+| Premium | 500 000 | Badge, mise en avant, AO anticipés, stats, multi-comptes |
+| Access | 1 000 000 | Boutique / vitrine e-commerce fournisseurs |
+| Business | Sur devis | Offre à la carte (spots, promos, besoins complexes) |
+
 ## Parcours de recette manuelle
 
-1. **Adhésion** — Landing → Inscrire → OTP (logs serveur) → Charte → Découverte ou paiement sandbox Standard  
+1. **Adhésion** — Landing → Inscrire (profil + formalités) → OTP → Charte → formule  
 2. **Fiche + label** — Dashboard → Ma fiche → Demander labellisation → payer audit → admin `/admin/dossiers`  
-3. **AO** — Publier besoin → répondre (quota Découverte) → retenir → messagerie  
-4. **Marketplace** — `/materiaux` → panier → checkout FSPay → boutique fournisseur change statut  
+3. **AO** — Publier besoin → répondre (quota Découverte) → retenir → messagerie (Standard+)  
+4. **Marketplace** — Formule Access/Business → boutique → commande + stock  
 5. **Formations** — Inscription + attestation après émargement admin  
 6. **Messagerie** — Contacter depuis fiche ; contacts masqués si non actifs  
 7. **Adhésion** — Renouvellement auto / historique `/dashboard/adhesion`  

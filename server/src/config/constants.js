@@ -1,6 +1,6 @@
 /** Constantes métier Bénin Top Builders */
 
-export const ROLES = ['visiteur', 'membre', 'admin', 'superadmin'];
+export const ROLES = ['visiteur', 'membre', 'formateur', 'admin', 'superadmin'];
 
 export const PROFIL_TYPES = [
   'entreprise_btp',
@@ -10,7 +10,7 @@ export const PROFIL_TYPES = [
   'maitre_ouvrage',
 ];
 
-export const PALIERS = ['decouverte', 'standard', 'premium', 'fournisseur'];
+export const PALIERS = ['decouverte', 'standard', 'premium', 'access', 'business'];
 
 export const LABEL_NIVEAUX = ['bronze', 'argent', 'or'];
 
@@ -65,6 +65,9 @@ export const AO_STATUS = ['ouvert', 'clos', 'attribue', 'annule'];
 export const REPONSE_STATUS = ['recue', 'en_etude', 'retenue', 'non_retenue'];
 
 export const COMMANDE_STATUS = [
+  'demande_envoyee',
+  'prise_de_contact',
+  'finalisee',
   'en_attente_paiement',
   'payee',
   'en_preparation',
@@ -93,21 +96,37 @@ export const CATEGORIES_MATERIAUX = [
   'agregats',
   'toiture',
   'quincaillerie',
+  'equipement',
+  'outillage',
+  'services',
+  'immobilier',
+  'autre',
 ];
 
 export const FORMATION_MODALITES = ['presentiel', 'en_ligne', 'hybride'];
 
+/** Tarifs annuels FCFA — `null` = à la carte (devis commercial) */
 export const TARIFS_FCFA = {
   adhesion: {
     decouverte: 0,
-    standard: 50000,
-    premium: 150000,
-    fournisseur: 75000,
+    standard: 200000,
+    premium: 500000,
+    access: 1000000,
+    business: null,
   },
   labellisation: {
     bronze: 75000,
     argent: 150000,
     or: 300000,
   },
-  commissionMarketplace: 0.03,
+  commissionMarketplace: 0,
+};
+
+/** Profils → formules recommandées à l'inscription */
+export const PALIERS_PAR_PROFIL = {
+  entreprise_btp: ['decouverte', 'standard', 'premium', 'business'],
+  artisan: ['decouverte', 'standard', 'premium'],
+  prestataire: ['decouverte', 'standard', 'premium'],
+  fournisseur: ['access', 'business', 'premium'],
+  maitre_ouvrage: ['decouverte', 'standard', 'business'],
 };

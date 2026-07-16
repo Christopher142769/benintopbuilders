@@ -24,15 +24,17 @@ function FlyTo({ center }) {
   return null;
 }
 
+const LABEL_STYLE = {
+  or: 'bg-amber-100 text-amber-800',
+  argent: 'bg-slate-200 text-slate-700',
+  bronze: 'bg-orange-100 text-orange-800',
+};
+
 function LabelBadge({ niveau }) {
   if (!niveau) return null;
-  const colors = {
-    or: 'bg-amber-100 text-amber-800',
-    argent: 'bg-slate-200 text-slate-700',
-    bronze: 'bg-orange-100 text-orange-800',
-  };
   return (
-    <span className={`rounded-pill px-2.5 py-0.5 text-[10px] font-extrabold uppercase ${colors[niveau] || 'bg-fond-doux'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-pill px-2.5 py-0.5 text-[10px] font-extrabold uppercase ${LABEL_STYLE[niveau] || 'bg-fond-doux'}`}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3"><circle cx="12" cy="9" r="6" /><path d="M9 14l-2 7 5-3 5 3-2-7" /></svg>
       {niveau}
     </span>
   );
@@ -43,8 +45,44 @@ function Stars({ note }) {
   return (
     <span className="text-xs font-bold text-orange" aria-label={`${note} sur 5`}>
       {'★'.repeat(n)}
-      {'☆'.repeat(5 - n)}
+      <span className="text-black/15">{'★'.repeat(5 - n)}</span>
     </span>
+  );
+}
+
+const Pin = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+);
+
+function ProCard({ m }) {
+  const titre = m.entreprise || `${m.prenom || ''} ${m.nom || ''}`.trim();
+  return (
+    <Link to={`/pro/${m.slug}`} className="card card-hover group block p-5">
+      <div className="flex items-start gap-3">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-bleu-soft text-base font-extrabold text-bleu">
+          {(titre[0] || 'B').toUpperCase()}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="truncate text-[17px] font-extrabold leading-tight">{titre}</h2>
+            <LabelBadge niveau={m.label?.niveau} />
+          </div>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-gris">
+            <Pin />
+            {m.ville}{m.departement ? ` · ${m.departement}` : ''}{m.distance != null ? ` · ${Math.round(m.distance / 1000)} km` : ''}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center justify-between border-t border-filet pt-3">
+        <Stars note={m.noteMoyenne} />
+        <span className="flex items-center gap-2">
+          {m.palier === 'premium' && <span className="chip">Premium</span>}
+          <span className="text-gris transition group-hover:translate-x-1 group-hover:text-orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </span>
+        </span>
+      </div>
+    </Link>
   );
 }
 
@@ -96,11 +134,7 @@ export default function AnnuairePage() {
     queryKey: ['markers', metier, departement, label],
     queryFn: async () => {
       const { data } = await api.get('/membres/markers', {
-        params: {
-          metier: metier || undefined,
-          departement: departement || undefined,
-          label: label || undefined,
-        },
+        params: { metier: metier || undefined, departement: departement || undefined, label: label || undefined },
       });
       return data.data;
     },
@@ -118,9 +152,7 @@ export default function AnnuairePage() {
       const { latitude: lat, longitude: lng } = pos.coords;
       setMapCenter([lat, lng]);
       setNearMode(true);
-      const { data } = await api.get('/membres/near', {
-        params: { lat, lng, maxDistance: 40000 },
-      });
+      const { data } = await api.get('/membres/near', { params: { lat, lng, maxDistance: 40000 } });
       setItems(data.data);
       setPagination({ hasMore: false, total: data.data.length });
     });
@@ -129,52 +161,56 @@ export default function AnnuairePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-8">
       <p className="eyebrow">Annuaire géolocalisé</p>
-      <h1 className="mt-2 font-display text-3xl font-extrabold md:text-4xl">Professionnels du BTP</h1>
-      <p className="mt-2 max-w-2xl text-black/65">
+      <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">Professionnels du BTP</h1>
+      <p className="mt-2 max-w-2xl text-gris">
         Recherchez par métier, département et label. Tri : Or → Argent → Bronze, puis Premium, puis note.
       </p>
 
-      <div className="mt-6 flex flex-col gap-3">
-        <input
-          value={q}
-          onChange={(e) => resetAndFilter(() => setQ(e.target.value))}
-          placeholder="Rechercher une entreprise, une ville…"
-          className="w-full rounded-2xl border-[1.5px] border-black/10 bg-fond-doux px-4 py-3 font-medium"
-        />
-        <div className="flex flex-wrap gap-2">
+      {/* Barre de filtres */}
+      <div className="card mt-6 p-4 md:p-5">
+        <div className="relative">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gris">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-5 w-5"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+          </span>
+          <input
+            value={q}
+            onChange={(e) => resetAndFilter(() => setQ(e.target.value))}
+            placeholder="Rechercher une entreprise, une ville…"
+            className="input pl-11"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
           {METIERS.map((m) => (
             <button
               key={m.value}
               type="button"
               onClick={() => resetAndFilter(() => setMetier(metier === m.value ? '' : m.value))}
-              className={`rounded-pill px-3 py-1.5 text-xs font-extrabold ${
-                metier === m.value ? 'bg-bleu text-white' : 'bg-fond-doux'
+              className={`rounded-pill border px-3.5 py-1.5 text-xs font-extrabold transition ${
+                metier === m.value ? 'border-bleu bg-bleu text-white' : 'border-filet bg-white text-ink hover:border-bleu'
               }`}
             >
               {m.label}
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-filet pt-4">
           <select
             value={departement}
             onChange={(e) => resetAndFilter(() => setDepartement(e.target.value))}
-            className="rounded-pill border-[1.5px] border-black/10 bg-white px-4 py-2 text-sm font-bold"
+            className="input !w-auto !py-2 !text-sm !font-bold"
           >
             <option value="">Tous départements</option>
-            {DEPARTEMENTS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
+            {DEPARTEMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
           {LABEL_NIVEAUX.map((l) => (
             <button
               key={l}
               type="button"
               onClick={() => resetAndFilter(() => setLabel(label === l ? '' : l))}
-              className={`rounded-pill px-3 py-1.5 text-xs font-extrabold capitalize ${
-                label === l ? 'bg-ink text-white' : 'bg-fond-doux'
+              className={`rounded-pill border px-3.5 py-2 text-xs font-extrabold capitalize transition ${
+                label === l ? 'border-ink bg-ink text-white' : 'border-filet bg-white hover:border-ink'
               }`}
             >
               {l}
@@ -183,14 +219,14 @@ export default function AnnuairePage() {
           <button
             type="button"
             onClick={() => resetAndFilter(() => setDisponible(!disponible))}
-            className={`rounded-pill px-3 py-1.5 text-xs font-extrabold ${
-              disponible ? 'bg-orange text-white' : 'bg-fond-doux'
+            className={`rounded-pill border px-3.5 py-2 text-xs font-extrabold transition ${
+              disponible ? 'border-orange bg-orange text-white' : 'border-filet bg-white hover:border-orange'
             }`}
           >
             Disponible
           </button>
-          <button type="button" onClick={aroundMe} className="btn-line !px-4 !py-2 text-xs">
-            Autour de moi
+          <button type="button" onClick={aroundMe} className="btn-line btn-sm ml-auto">
+            <Pin /> Autour de moi
           </button>
         </div>
       </div>
@@ -198,47 +234,29 @@ export default function AnnuairePage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div>
           {items.length === 0 && !isFetching && (
-            <div className="card p-10 text-center">
-              <p className="font-display text-xl font-extrabold">Aucun professionnel trouvé</p>
-              <p className="mt-2 text-sm text-black/60">Élargissez vos filtres ou explorez la carte.</p>
+            <div className="card flex flex-col items-center p-12 text-center">
+              <span className="grid h-16 w-16 place-items-center rounded-2xl bg-bleu-soft text-bleu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-8 w-8"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+              </span>
+              <p className="mt-5 text-xl font-extrabold">Aucun professionnel pour le moment</p>
+              <p className="mt-2 max-w-sm text-sm text-gris">
+                L&apos;annuaire se remplira lorsque les membres publieront leur fiche depuis leur espace.
+              </p>
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
-            {items.map((m) => (
-              <Link key={m._id || m.slug} to={`/pro/${m.slug}`} className="card block p-5 transition hover:-translate-y-0.5">
-                <div className="flex items-start justify-between gap-2">
-                  <h2 className="font-display text-lg font-extrabold leading-tight">
-                    {m.entreprise || `${m.prenom} ${m.nom}`}
-                  </h2>
-                  <LabelBadge niveau={m.label?.niveau} />
-                </div>
-                <p className="mt-1 text-sm text-black/55">
-                  {m.ville}
-                  {m.departement ? ` · ${m.departement}` : ''}
-                  {m.distance != null ? ` · ${Math.round(m.distance / 1000)} km` : ''}
-                </p>
-                <div className="mt-3 flex items-center justify-between">
-                  <Stars note={m.noteMoyenne} />
-                  {m.palier === 'premium' && (
-                    <span className="text-[10px] font-extrabold uppercase tracking-wide text-bleu">Premium</span>
-                  )}
-                </div>
-              </Link>
-            ))}
+            {items.map((m) => <ProCard key={m._id || m.slug} m={m} />)}
           </div>
           {pagination?.hasMore && (
-            <button
-              type="button"
-              className="btn-line mt-6"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={isFetching}
-            >
-              Charger plus
-            </button>
+            <div className="mt-6 flex justify-center">
+              <button type="button" className="btn-line" onClick={() => setPage((p) => p + 1)} disabled={isFetching}>
+                {isFetching ? 'Chargement…' : 'Charger plus'}
+              </button>
+            </div>
           )}
         </div>
 
-        <div className="overflow-hidden rounded-[24px] border-[1.5px] border-card shadow-soft h-[420px] lg:sticky lg:top-24">
+        <div className="h-[440px] overflow-hidden rounded-card border border-filet shadow-soft lg:sticky lg:top-24">
           <MapContainer center={mapCenter} zoom={11} className="h-full w-full" scrollWheelZoom={false}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'

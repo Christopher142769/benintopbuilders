@@ -2,13 +2,15 @@ import { Produit } from '../models/Produit.js';
 import { Commande } from '../models/Commande.js';
 import { User } from '../models/User.js';
 import { AppError } from '../utils/apiResponse.js';
-import { TARIFS_FCFA } from '../config/constants.js';
-import { initierPaiement } from './paiement.service.js';
+import { peutBoutique } from '../config/droits.js';
 
 const COMMANDE_TRANSITIONS = {
-  en_attente_paiement: ['payee', 'annulee'],
-  payee: ['en_preparation', 'annulee'],
-  en_preparation: ['livree'],
+  demande_envoyee: ['prise_de_contact', 'annulee'],
+  prise_de_contact: ['finalisee', 'annulee'],
+  finalisee: [],
+  en_attente_paiement: ['annulee'],
+  payee: ['finalisee', 'annulee'],
+  en_preparation: ['finalisee', 'annulee'],
   livree: [],
   annulee: [],
 };
@@ -23,20 +25,20 @@ export function assertCommandeTransition(from, to) {
 }
 
 export async function catalogue({ q, categorie, page = 1, limit = 24 } = {}) {
-  const filter = { actif: true, stock: { $gt: 0 } };
+  const filter = { actif: true };
   if (categorie) filter.categorie = categorie;
   if (q) filter.$text = { $search: q };
 
   const vendeurs = await User.find({
     statut: 'actif',
-    palier: 'fournisseur',
+    palier: { $in: ['standard', 'premium', 'access', 'business'] },
   }).select('_id');
   filter.vendeurId = { $in: vendeurs.map((v) => v._id) };
 
   const skip = (Number(page) - 1) * Number(limit);
   const [data, total] = await Promise.all([
     Produit.find(filter)
-      .populate('vendeurId', 'entreprise slug ville label noteMoyenne')
+      .populate('vendeurId', 'entreprise prenom nom slug ville label noteMoyenne palier logoUrl')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
@@ -55,8 +57,8 @@ export async function mesProduits(vendeurId) {
 }
 
 export async function upsertProduit(vendeur, payload, produitId) {
-  if (vendeur.palier !== 'fournisseur' || vendeur.statut !== 'actif') {
-    throw new AppError('Boutique réservée au palier Fournisseur actif', {
+  if (!peutBoutique(vendeur.palier) || vendeur.statut !== 'actif') {
+    throw new AppError('Marketplace réservée aux formules Standard et supérieures', {
       status: 403,
       code: 'FORBIDDEN',
     });
@@ -78,88 +80,83 @@ export async function supprimerProduit(vendeurId, produitId) {
 }
 
 /**
- * Décrémente le stock atomiquement produit par produit.
- * Rollback compensatoire si un stock est insuffisant (sans transaction replica-set).
+ * Enregistre une demande de commande sans paiement ni commission.
+ * Une demande distincte est créée par société afin de préserver la confidentialité.
  */
-export async function creerCommande(acheteur, { lignes, adresseLivraison }) {
+export async function creerCommande(acheteur, { lignes, adresseLivraison, message }) {
   if (!lignes?.length) throw new AppError('Panier vide', { status: 400, code: 'EMPTY_CART' });
+  if (acheteur.statut !== 'actif') {
+    throw new AppError('Compte actif requis', { status: 403, code: 'FORBIDDEN' });
+  }
+  if (acheteur.palier === 'decouverte') {
+    throw new AppError('Les demandes Marketplace sont disponibles dès la formule Standard', {
+      status: 403,
+      code: 'STANDARD_REQUIRED',
+    });
+  }
 
-  const reserved = [];
-  try {
-    const lignesCalculees = [];
-    let sousTotal = 0;
-
-    for (const ligne of lignes) {
-      const updated = await Produit.findOneAndUpdate(
-        {
-          _id: ligne.produitId,
-          actif: true,
-          stock: { $gte: ligne.quantite },
-        },
-        { $inc: { stock: -ligne.quantite } },
-        { new: true }
-      );
-      if (!updated) {
-        throw new AppError(`Stock insuffisant pour ${ligne.produitId}`, {
-          status: 409,
-          code: 'STOCK_INSUFFISANT',
-        });
-      }
-      reserved.push({ produitId: updated._id, quantite: ligne.quantite });
-      const prix = updated.prixUnitaire;
-      const st = prix * ligne.quantite;
-      sousTotal += st;
-      lignesCalculees.push({
-        produitId: updated._id,
-        vendeurId: updated.vendeurId,
-        nom: updated.nom,
-        prixUnitaire: prix,
-        quantite: ligne.quantite,
-        sousTotal: st,
+  const groupes = new Map();
+  for (const ligne of lignes) {
+    const produit = await Produit.findOne({ _id: ligne.produitId, actif: true });
+    if (!produit) {
+      throw new AppError('Produit indisponible', { status: 404, code: 'PRODUCT_UNAVAILABLE' });
+    }
+    if (String(produit.vendeurId) === String(acheteur._id)) {
+      throw new AppError('Vous ne pouvez pas commander votre propre produit', {
+        status: 403,
+        code: 'OWN_PRODUCT',
       });
     }
-
-    const fraisService = Math.round(sousTotal * TARIFS_FCFA.commissionMarketplace);
-    const total = sousTotal + fraisService;
-
-    const commande = await Commande.create({
-      acheteurId: acheteur._id,
-      lignes: lignesCalculees,
-      adresseLivraison,
+    const vendeurId = String(produit.vendeurId);
+    const sousTotal = produit.prixUnitaire * ligne.quantite;
+    const row = {
+      produitId: produit._id,
+      vendeurId: produit.vendeurId,
+      nom: produit.nom,
+      prixUnitaire: produit.prixUnitaire,
+      quantite: ligne.quantite,
       sousTotal,
-      fraisService,
-      total,
-      statut: 'en_attente_paiement',
-      stockReserveAt: new Date(),
-    });
-
-    const pay = await initierPaiement({
-      userId: acheteur._id,
-      type: 'commande',
-      montant: total,
-      meta: { commandeId: commande._id },
-    });
-
-    commande.paiementId = pay.paiement._id;
-    await commande.save();
-
-    return { commande, checkoutUrl: pay.checkoutUrl, sandbox: pay.sandbox, paiement: pay.paiement };
-  } catch (err) {
-    for (const r of reserved) {
-      await Produit.updateOne({ _id: r.produitId }, { $inc: { stock: r.quantite } });
-    }
-    throw err;
+    };
+    groupes.set(vendeurId, [...(groupes.get(vendeurId) || []), row]);
   }
+
+  const commandes = [];
+  for (const rows of groupes.values()) {
+    const sousTotal = rows.reduce((sum, row) => sum + row.sousTotal, 0);
+    commandes.push(
+      await Commande.create({
+        acheteurId: acheteur._id,
+        lignes: rows,
+        adresseLivraison,
+        message,
+        sousTotal,
+        fraisService: 0,
+        commissionTaux: 0,
+        total: sousTotal,
+        transactionHorsPlateforme: true,
+        statut: 'demande_envoyee',
+      })
+    );
+  }
+
+  return {
+    commandes,
+    needsPayment: false,
+    commissionTaux: 0,
+    transactionHorsPlateforme: true,
+  };
 }
 
 export async function mesCommandes(acheteurId) {
-  return Commande.find({ acheteurId }).sort({ createdAt: -1 });
+  return Commande.find({ acheteurId })
+    .populate('lignes.vendeurId', 'entreprise prenom nom telephone email slug noteMoyenne')
+    .sort({ createdAt: -1 });
 }
 
 export async function mesVentes(vendeurId) {
-  return Commande.find({ 'lignes.vendeurId': vendeurId, statut: { $ne: 'en_attente_paiement' } }).sort({
-    createdAt: -1,
-  });
+  return Commande.find({ 'lignes.vendeurId': vendeurId })
+    .populate('acheteurId', 'entreprise prenom nom telephone email ville')
+    .sort({ createdAt: -1 });
 }
 
 export async function transitionCommande(commandeId, user, to) {
@@ -170,8 +167,14 @@ export async function transitionCommande(commandeId, user, to) {
   const isAcheteur = String(commande.acheteurId) === String(user._id);
   const isAdmin = ['admin', 'superadmin'].includes(user.role);
 
-  if (to === 'en_preparation' || to === 'livree') {
+  if (to === 'prise_de_contact') {
     if (!isVendeur && !isAdmin) throw new AppError('Non autorisé', { status: 403, code: 'FORBIDDEN' });
+  }
+  if (to === 'finalisee' && !isAcheteur && !isAdmin) {
+    throw new AppError('Seul l’acheteur peut clôturer cet échange', {
+      status: 403,
+      code: 'FORBIDDEN',
+    });
   }
   if (to === 'annulee' && !isAcheteur && !isVendeur && !isAdmin) {
     throw new AppError('Non autorisé', { status: 403, code: 'FORBIDDEN' });
@@ -179,26 +182,12 @@ export async function transitionCommande(commandeId, user, to) {
 
   assertCommandeTransition(commande.statut, to);
   commande.statut = to;
-  if (to === 'livree') commande.livreeAt = new Date();
+  if (to === 'finalisee') commande.livreeAt = new Date();
   await commande.save();
   return commande;
 }
 
 export async function restituerStocksExpires() {
-  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
-  const commandes = await Commande.find({
-    statut: 'en_attente_paiement',
-    stockReserveAt: { $lte: cutoff },
-  });
-
-  let n = 0;
-  for (const c of commandes) {
-    for (const l of c.lignes) {
-      await Produit.updateOne({ _id: l.produitId }, { $inc: { stock: l.quantite } });
-    }
-    c.statut = 'annulee';
-    await c.save();
-    n += 1;
-  }
-  return n;
+  // Les transactions sont conclues hors plateforme : aucun stock n'est réservé.
+  return 0;
 }

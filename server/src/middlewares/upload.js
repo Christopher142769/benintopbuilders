@@ -14,6 +14,8 @@ fs.mkdirSync(path.join(uploadsRoot, 'dossiers'), { recursive: true });
 fs.mkdirSync(path.join(uploadsRoot, 'ao'), { recursive: true });
 fs.mkdirSync(path.join(uploadsRoot, 'produits'), { recursive: true });
 fs.mkdirSync(path.join(uploadsRoot, 'rccm'), { recursive: true });
+fs.mkdirSync(path.join(uploadsRoot, 'formations'), { recursive: true });
+fs.mkdirSync(path.join(uploadsRoot, 'examens'), { recursive: true });
 
 const storage = multer.memoryStorage();
 
@@ -43,6 +45,20 @@ function documentFilter(_req, file, cb) {
   );
 }
 
+function flexibleFileFilter(_req, file, cb) {
+  const ok =
+    /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype) ||
+    DOC_MIMES.has(file.mimetype) ||
+    /\.(pdf|doc|docx)$/i.test(file.originalname || '');
+  if (ok) return cb(null, true);
+  return cb(
+    new AppError('Format non supporté (image, PDF, DOC ou DOCX)', {
+      status: 400,
+      code: 'INVALID_FILE',
+    })
+  );
+}
+
 export const uploadImage = multer({
   storage,
   fileFilter: imageOrPdfFilter,
@@ -53,4 +69,10 @@ export const uploadDocument = multer({
   storage,
   fileFilter: documentFilter,
   limits: { fileSize: Math.max(env.maxUploadMb, 10) * 1024 * 1024 },
+});
+
+export const uploadFlexible = multer({
+  storage,
+  fileFilter: flexibleFileFilter,
+  limits: { fileSize: Math.max(env.maxUploadMb, 10) * 1024 * 1024, files: 20 },
 });

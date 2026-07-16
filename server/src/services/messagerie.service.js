@@ -1,9 +1,27 @@
 import { Conversation } from '../models/Conversation.js';
 import { Message } from '../models/Message.js';
+import { User } from '../models/User.js';
 import { AppError } from '../utils/apiResponse.js';
 import { maskContacts, bothParticipantsActifs } from './maskContacts.js';
+import { peutMessagerie } from '../config/droits.js';
+
+async function assertMessagerie(userId) {
+  const user = await User.findById(userId).select('palier statut role');
+  if (!user || user.statut !== 'actif') {
+    throw new AppError('Compte inactif', { status: 403, code: 'FORBIDDEN' });
+  }
+  if (['admin', 'superadmin'].includes(user.role)) return user;
+  if (!peutMessagerie(user.palier)) {
+    throw new AppError('Messagerie réservée aux formules Standard et plus', {
+      status: 403,
+      code: 'PALIER_REQUIS',
+    });
+  }
+  return user;
+}
 
 export async function ouvrirConversation(userId, { participantId, contexte }) {
+  await assertMessagerie(userId);
   if (String(userId) === String(participantId)) {
     throw new AppError('Conversation invalide', { status: 400, code: 'INVALID' });
   }
@@ -26,6 +44,7 @@ export async function ouvrirConversation(userId, { participantId, contexte }) {
 }
 
 export async function listConversations(userId) {
+  await assertMessagerie(userId);
   return Conversation.find({ participants: userId })
     .sort({ dernierMessageAt: -1 })
     .populate('participants', 'prenom nom entreprise slug statut role palier');
@@ -51,6 +70,7 @@ export async function listMessages(userId, conversationId, { page = 1, limit = 5
 }
 
 export async function envoyerMessage(userId, conversationId, corps) {
+  await assertMessagerie(userId);
   const conv = await Conversation.findById(conversationId);
   if (!conv || !conv.participants.some((p) => String(p) === String(userId))) {
     throw new AppError('Conversation introuvable', { status: 404, code: 'NOT_FOUND' });

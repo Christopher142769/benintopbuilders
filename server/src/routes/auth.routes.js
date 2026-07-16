@@ -31,6 +31,7 @@ router.post('/refresh', authController.refresh);
 router.post('/logout', authenticate, authController.logout);
 router.post('/forgot-password', authLimiter, authController.forgotPassword);
 router.post('/reset-password', authLimiter, authController.resetPassword);
+router.post('/change-password', authenticate, authLimiter, authController.changePassword);
 router.get('/me', authenticate, authController.me);
 router.post(
   '/charte/accept',

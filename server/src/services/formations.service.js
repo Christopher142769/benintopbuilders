@@ -13,7 +13,10 @@ import path from 'path';
 import { uploadsRoot } from '../middlewares/upload.js';
 
 export async function catalogueFormations() {
-  return Formation.find({ active: true }).sort({ dateDebut: 1 });
+  return Formation.find({ active: true, statutPublication: 'publie' })
+    .select('-modules -examenFinal')
+    .populate('formateurId', 'prenom nom formateur.specialite')
+    .sort({ dateDebut: 1 });
 }
 
 export async function inscrireFormation(user, formationId, nbParticipants = 1) {
@@ -148,7 +151,11 @@ export async function creerAvis(auteur, { cibleId, note, commentaire, contexte }
     }
   } else if (contexte.type === 'commande') {
     const cmd = await Commande.findById(contexte.refId);
-    if (!cmd || cmd.statut !== 'livree' || String(cmd.acheteurId) !== String(auteur._id)) {
+    if (
+      !cmd ||
+      !['livree', 'finalisee'].includes(cmd.statut) ||
+      String(cmd.acheteurId) !== String(auteur._id)
+    ) {
       throw new AppError('Avis hors contexte commande livrée', { status: 403, code: 'FORBIDDEN' });
     }
     const ok = cmd.lignes.some((l) => String(l.vendeurId) === String(cibleId));

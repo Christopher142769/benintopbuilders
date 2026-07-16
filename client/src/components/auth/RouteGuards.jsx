@@ -30,10 +30,22 @@ export function AdminRoute({ children }) {
   const accessToken = useAuthStore((s) => s.accessToken);
 
   if (!accessToken || !user) {
-    return <Navigate to="/connexion" replace />;
+    return <Navigate to="/admin/connexion" replace />;
   }
   if (user.role !== 'admin' && user.role !== 'superadmin') {
     return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+export function TrainerRoute({ children }) {
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  if (!accessToken || !user) {
+    return <Navigate to="/formateur/connexion" replace />;
+  }
+  if (user.role !== 'formateur') {
+    return <Navigate to={['admin', 'superadmin'].includes(user.role) ? '/admin' : '/dashboard'} replace />;
   }
   return children;
 }
@@ -42,7 +54,18 @@ export function GuestRoute({ children }) {
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   if (accessToken && user?.statut === 'actif') {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate
+        to={
+          ['admin', 'superadmin'].includes(user.role)
+            ? '/admin'
+            : user.role === 'formateur'
+              ? '/formateur'
+              : '/dashboard'
+        }
+        replace
+      />
+    );
   }
   return children;
 }

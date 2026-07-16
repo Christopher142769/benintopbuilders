@@ -48,6 +48,16 @@ const userSchema = new mongoose.Schema(
     palier: { type: String, enum: PALIERS, default: 'decouverte', index: true },
     renewalAuto: { type: Boolean, default: false },
     adhesionExpireAt: { type: Date, index: true },
+    commercialDemandeAt: { type: Date },
+    lastActiveAt: { type: Date, index: true },
+
+    // Profil formateur — créé et piloté depuis le back-office
+    formateur: {
+      niveauxLabels: [{ type: String, enum: LABEL_NIVEAUX }],
+      specialite: { type: String, trim: true },
+      bio: { type: String, maxlength: 2000 },
+      actif: { type: Boolean, default: true },
+    },
 
     // Identité
     prenom: { type: String, trim: true },

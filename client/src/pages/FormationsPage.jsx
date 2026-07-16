@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { EmptyState, PageHeader } from '../components/ui/PageKit';
 import api from '../lib/api';
 import { formatFcfa } from '../lib/constants';
 import { useAuthStore } from '../store/authStore';
@@ -17,6 +18,28 @@ export default function FormationsPage() {
     queryKey: ['formations'],
     queryFn: async () => (await api.get('/formations')).data.data,
   });
+  const { data: inscriptions = [] } = useQuery({
+    queryKey: ['mes-inscriptions-formations'],
+    queryFn: async () => (await api.get('/formations/mes-inscriptions')).data.data,
+    enabled: Boolean(user),
+  });
+  const { data: dossier } = useQuery({
+    queryKey: ['mon-dossier-label-formations'],
+    queryFn: async () => (await api.get('/me/dossier')).data.data,
+    enabled: Boolean(user),
+  });
+
+  function canFollow(formation) {
+    const formationId = formation.id || formation._id;
+    const enrolled = inscriptions.some((item) => {
+      const target = item.formationId?.id || item.formationId?._id || item.formationId;
+      return String(target) === String(formationId) && ['confirmee', 'presente'].includes(item.statut);
+    });
+    const required = (dossier?.formationsRequises || []).some((item) =>
+      String(item.id || item._id || item) === String(formationId)
+    );
+    return enrolled || required;
+  }
 
   async function inscrire() {
     if (!user) {
@@ -42,21 +65,47 @@ export default function FormationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8">
-      <p className="eyebrow">Compétences</p>
-      <h1 className="mt-2 font-display text-3xl font-extrabold md:text-4xl">Formations</h1>
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader
+        eyebrow="Compétences & labellisation"
+        title="Progressez, validez, faites reconnaître votre expertise."
+        description="Inscrivez-vous aux sessions professionnelles et complétez les formations requises pour vos labels Bronze, Argent ou Or."
+        stats={[
+          { label: 'Sessions ouvertes', value: formations.length },
+          { label: 'Modalités', value: 'Présentiel & ligne' },
+          { label: 'Attestation', value: 'Incluse' },
+        ]}
+      />
+      <div className="grid gap-4 md:grid-cols-2">
+        {formations.length === 0 && (
+          <div className="md:col-span-2">
+            <EmptyState title="Aucune formation planifiée" description="Les sessions ajoutées par l’équipe apparaîtront ici." icon="◇" />
+          </div>
+        )}
         {formations.map((f) => (
-          <article key={f._id} className="card p-6">
+          <article key={f._id} className="card card-hover overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-bleu to-orange" />
+            <div className="p-6">
+            <div className="flex flex-wrap gap-2">
+              <span className="chip capitalize">{f.modalite}</span>
+              {f.requiseLabelOr && <span className="chip-orange">Requise label Or</span>}
+            </div>
             <h2 className="font-display text-xl font-extrabold">{f.titre}</h2>
             <p className="mt-2 text-sm text-black/65 line-clamp-3">{f.description}</p>
             <p className="mt-3 text-xs font-bold uppercase text-bleu">
               {f.modalite} · {f.dureeHeures}h · {f.placesRestantes} places
             </p>
             <p className="mt-2 font-extrabold">{formatFcfa(f.tarifMembre)} (membre)</p>
-            <button type="button" className="btn-orange mt-4" onClick={() => setModal(f)}>
-              S&apos;inscrire
-            </button>
+            {canFollow(f) ? (
+              <button type="button" className="btn-orange mt-4" onClick={() => navigate(`/dashboard/formations/${f.id || f._id}`)}>
+                Continuer le parcours →
+              </button>
+            ) : (
+              <button type="button" className="btn-orange mt-4" onClick={() => setModal(f)}>
+                S&apos;inscrire
+              </button>
+            )}
+            </div>
           </article>
         ))}
       </div>

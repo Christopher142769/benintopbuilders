@@ -13,3 +13,6 @@ export { InscriptionFormation } from './InscriptionFormation.js';
 export { Avis } from './Avis.js';
 export { Notification } from './Notification.js';
 export { AuditLog } from './AuditLog.js';
+export { LabelFormulaire, LABEL_FIELD_TYPES } from './LabelFormulaire.js';
+export { ProgressionFormation } from './ProgressionFormation.js';
+export { ActivityEvent } from './ActivityEvent.js';

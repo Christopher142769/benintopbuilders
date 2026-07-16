@@ -33,8 +33,8 @@ export const useCartStore = create(
       remove: (produitId) => set({ items: get().items.filter((i) => i.produitId !== produitId) }),
       clear: () => set({ items: [] }),
       sousTotal: () => get().items.reduce((s, i) => s + i.prixUnitaire * i.quantite, 0),
-      fraisService: () => Math.round(get().sousTotal() * 0.03),
-      total: () => get().sousTotal() + get().fraisService(),
+      fraisService: () => 0,
+      total: () => get().sousTotal(),
     }),
     { name: 'btb-cart' }
   )

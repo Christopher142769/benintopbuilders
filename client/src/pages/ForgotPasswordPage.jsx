@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
+import AuthShell from '../components/layout/AuthShell';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -19,34 +20,32 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <div className="card p-8">
-        <h1 className="font-display text-2xl font-extrabold">Mot de passe oublié</h1>
-        {sent ? (
-          <p className="mt-4 text-sm text-black/70">
-            Vérifiez votre boîte mail. En développement, le lien apparaît dans les logs serveur.
+    <AuthShell
+      eyebrow="Récupération"
+      title="Mot de passe oublié"
+      subtitle="Saisissez votre e-mail : nous vous enverrons un lien pour réinitialiser votre mot de passe."
+      footer={
+        <p className="text-center text-sm font-medium text-gris">
+          <Link to="/connexion" className="font-extrabold text-bleu hover:underline">← Retour à la connexion</Link>
+        </p>
+      }
+    >
+      {sent ? (
+        <div className="rounded-card border border-filet bg-bleu-soft p-6 text-sm font-medium text-ink">
+          <p className="font-bold text-bleu">E-mail envoyé ✓</p>
+          <p className="mt-2 text-gris">
+            Vérifiez votre boîte mail. En développement, le lien apparaît dans les logs du serveur.
           </p>
-        ) : (
-          <form onSubmit={onSubmit} className="mt-6 space-y-4">
-            <label className="block text-sm font-bold">
-              E-mail
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5 w-full rounded-2xl border-[1.5px] border-black/10 bg-fond-doux px-4 py-3"
-              />
-            </label>
-            <button type="submit" className="btn-orange w-full">
-              Envoyer le lien
-            </button>
-          </form>
-        )}
-        <Link to="/connexion" className="mt-6 inline-block text-sm font-bold text-bleu">
-          Retour connexion
-        </Link>
-      </div>
-    </div>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} className="space-y-5">
+          <div>
+            <label className="label" htmlFor="email">Adresse e-mail</label>
+            <input id="email" type="email" required placeholder="vous@entreprise.bj" value={email} onChange={(e) => setEmail(e.target.value)} className="input" />
+          </div>
+          <button type="submit" className="btn-orange w-full">Envoyer le lien</button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

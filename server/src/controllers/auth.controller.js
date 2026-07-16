@@ -11,6 +11,7 @@ import {
   palierSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
 } from '../validators/auth.validators.js';
 
 function parseRegisterBody(raw) {
@@ -143,6 +144,13 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 export const resetPassword = asyncHandler(async (req, res) => {
   const body = resetPasswordSchema.parse(req.body);
   const data = await authService.resetPassword(body);
+  return ok(res, data, data.message);
+});
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const body = changePasswordSchema.parse(req.body);
+  const data = await authService.changePassword(req.user._id, body);
+  res.clearCookie(authService.REFRESH_COOKIE, { path: '/api/auth' });
   return ok(res, data, data.message);
 });
 

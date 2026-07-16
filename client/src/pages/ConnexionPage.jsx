@@ -5,15 +5,20 @@ import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { loginSchema } from '../lib/schemas';
 import { useAuthStore } from '../store/authStore';
+import AuthShell from '../components/layout/AuthShell';
+import { useState } from 'react';
+import { Icon } from '../components/ui/icons';
 
 export default function ConnexionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setSession = useAuthStore((s) => s.setSession);
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
+  const { errors, isSubmitting } = form.formState;
 
   async function onSubmit(values) {
     try {
@@ -28,43 +33,46 @@ export default function ConnexionPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12 md:px-8">
-      <div className="card p-8">
-        <p className="eyebrow">Espace membre</p>
-        <h1 className="mt-2 font-display text-3xl font-extrabold">Connexion</h1>
-        <form className="mt-8 space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-          <label className="block text-sm font-bold">
-            E-mail
-            <input
-              type="email"
-              className="mt-1.5 w-full rounded-2xl border-[1.5px] border-black/10 bg-fond-doux px-4 py-3"
-              {...form.register('email')}
-            />
-          </label>
-          <label className="block text-sm font-bold">
-            Mot de passe
-            <input
-              type="password"
-              className="mt-1.5 w-full rounded-2xl border-[1.5px] border-black/10 bg-fond-doux px-4 py-3"
-              {...form.register('password')}
-            />
-          </label>
-          <div className="flex justify-end">
-            <Link to="/mot-de-passe-oublie" className="text-sm font-bold text-bleu hover:underline">
-              Mot de passe oublié ?
-            </Link>
-          </div>
-          <button type="submit" className="btn-orange w-full">
-            Se connecter
-          </button>
-        </form>
-        <p className="mt-6 text-center text-sm text-black/60">
+    <AuthShell
+      eyebrow="Espace membre"
+      title="Content de vous revoir"
+      subtitle="Connectez-vous pour accéder à votre tableau de bord, vos opportunités et votre messagerie."
+      footer={
+        <p className="text-center text-sm font-medium text-gris">
           Pas encore membre ?{' '}
-          <Link to="/inscription" className="font-extrabold text-orange">
-            S&apos;inscrire
+          <Link to="/inscription" className="font-extrabold text-orange hover:underline">
+            Créer un compte
           </Link>
         </p>
-      </div>
-    </div>
+      }
+    >
+      <form className="space-y-4 sm:space-y-5" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+        <div>
+          <label className="label" htmlFor="email">Adresse e-mail</label>
+          <div className="auth-input-wrap">
+            <span className="auth-input-icon">{Icon.user({ className: 'h-4 w-4' })}</span>
+            <input id="email" type="email" autoComplete="email" placeholder="vous@entreprise.bj" className="input !border-0 !bg-transparent !pl-12 !shadow-none" {...form.register('email')} />
+          </div>
+          {errors.email && <p className="field-error">{errors.email.message}</p>}
+        </div>
+        <div>
+          <div className="flex items-center justify-between">
+            <label className="label" htmlFor="password">Mot de passe</label>
+            <Link to="/mot-de-passe-oublie" className="mb-1.5 text-xs font-bold text-bleu hover:underline">Oublié ?</Link>
+          </div>
+          <div className="auth-input-wrap">
+            <span className="auth-input-icon">{Icon.shield({ className: 'h-4 w-4' })}</span>
+            <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••" className="input !border-0 !bg-transparent !px-12 !shadow-none" {...form.register('password')} />
+            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-extrabold text-bleu" onClick={() => setShowPassword((value) => !value)}>
+              {showPassword ? 'MASQUER' : 'AFFICHER'}
+            </button>
+          </div>
+          {errors.password && <p className="field-error">{errors.password.message}</p>}
+        </div>
+        <button type="submit" disabled={isSubmitting} className="btn-orange w-full shadow-[0_12px_30px_rgba(249,115,22,.28)] disabled:opacity-60">
+          {isSubmitting ? 'Connexion…' : 'Se connecter'}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

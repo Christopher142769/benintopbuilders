@@ -13,6 +13,10 @@ function extFromUpload(file) {
   if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     return 'docx';
   }
+  if (file.mimetype === 'image/jpeg') return 'jpg';
+  if (file.mimetype === 'image/png') return 'png';
+  if (file.mimetype === 'image/webp') return 'webp';
+  if (file.mimetype === 'image/gif') return 'gif';
   return 'bin';
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
+import AuthShell from '../components/layout/AuthShell';
 
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -21,29 +22,25 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <div className="card p-8">
-        <h1 className="font-display text-2xl font-extrabold">Nouveau mot de passe</h1>
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
-          <label className="block text-sm font-bold">
-            Mot de passe
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 w-full rounded-2xl border-[1.5px] border-black/10 bg-fond-doux px-4 py-3"
-            />
-          </label>
-          <button type="submit" className="btn-orange w-full" disabled={!token}>
-            Enregistrer
-          </button>
-        </form>
-        <Link to="/connexion" className="mt-6 inline-block text-sm font-bold text-bleu">
-          Connexion
-        </Link>
-      </div>
-    </div>
+    <AuthShell
+      eyebrow="Sécurité"
+      title="Nouveau mot de passe"
+      subtitle="Choisissez un mot de passe d'au moins 8 caractères."
+      footer={
+        <p className="text-center text-sm font-medium text-gris">
+          <Link to="/connexion" className="font-extrabold text-bleu hover:underline">← Retour à la connexion</Link>
+        </p>
+      }
+    >
+      <form onSubmit={onSubmit} className="space-y-5">
+        <div>
+          <label className="label" htmlFor="password">Mot de passe</label>
+          <input id="password" type="password" required minLength={8} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="input" />
+          <p className="field-hint">Minimum 8 caractères.</p>
+        </div>
+        <button type="submit" className="btn-orange w-full disabled:opacity-60" disabled={!token}>Enregistrer</button>
+        {!token && <p className="field-error">Lien invalide ou expiré.</p>}
+      </form>
+    </AuthShell>
   );
 }

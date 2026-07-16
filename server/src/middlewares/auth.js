@@ -1,4 +1,5 @@
 import { User } from '../models/User.js';
+import { ActivityEvent } from '../models/ActivityEvent.js';
 import { AppError } from '../utils/apiResponse.js';
 import { verifyAccessToken } from '../utils/jwt.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -18,6 +19,20 @@ export const authenticate = asyncHandler(async (req, _res, next) => {
     throw new AppError('Compte suspendu', { status: 403, code: 'ACCOUNT_SUSPENDED' });
   }
   req.user = user;
+  const now = new Date();
+  const day = now.toISOString().slice(0, 10);
+  void Promise.all([
+    User.updateOne({ _id: user._id }, { $set: { lastActiveAt: now } }),
+    ActivityEvent.updateOne(
+      { userId: user._id, day, hour: now.getUTCHours() },
+      {
+        $inc: { requests: 1 },
+        $set: { lastSeenAt: now, lastPath: req.originalUrl?.slice(0, 300) },
+        $setOnInsert: { userId: user._id, day, hour: now.getUTCHours() },
+      },
+      { upsert: true }
+    ),
+  ]).catch(() => {});
   next();
 });
 

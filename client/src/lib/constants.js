@@ -1,28 +1,134 @@
+/** Formalités selon le profil métier technique (API) */
+export const FORMALITES_PAR_PROFIL = {
+  entreprise_btp: ['RCCM (PDF/DOC)', 'IFU', 'Raison sociale', 'Zones d’intervention'],
+  artisan: ['RCCM (PDF/DOC)', 'Métiers', 'Présentation / CV', 'Téléphone'],
+  prestataire: ['RCCM (PDF/DOC)', 'IFU', 'Métiers techniques', 'Présentation'],
+  fournisseur: ['RCCM (PDF/DOC)', 'IFU', 'Raison sociale', 'Catalogue / métiers fourniture'],
+  maitre_ouvrage: ['Identité', 'Téléphone', 'Structure (optionnel)', 'Pas de RCCM requis'],
+};
+
+/**
+ * Cibles (= profils d’inscription) par formule — alignées sur la grille tarifaire.
+ * `profilType` : valeur envoyée à l’API.
+ */
+export const CIBLES_PAR_FORMULE = {
+  decouverte: [
+    {
+      value: 'pme_informelle',
+      title: 'PME informelle / primo-inscrit',
+      desc: 'Structure en phase d’implantation, à convertir vers une offre payante.',
+      profilType: 'entreprise_btp',
+    },
+    {
+      value: 'pro_btp',
+      title: 'Professionnel de BTP',
+      desc: 'CV de professionnel qualifié en quête d’emplois et d’opportunités.',
+      profilType: 'artisan',
+    },
+    {
+      value: 'particulier_promoteur_cabinet',
+      title: 'Particulier, promoteur ou cabinet d’études',
+      desc: 'Particuliers, promoteurs immobiliers, cabinets d’études, etc.',
+      profilType: 'maitre_ouvrage',
+    },
+  ],
+  standard: [
+    {
+      value: 'pme_structuree',
+      title: 'PME structurée / prescripteur',
+      desc: 'Entreprise organisée répondant régulièrement aux appels d’offres.',
+      profilType: 'entreprise_btp',
+    },
+    {
+      value: 'cabinet_etudes',
+      title: 'Cabinet d’études',
+      desc: 'Bureau d’études, ingénierie, architecture ou topographie.',
+      profilType: 'prestataire',
+    },
+  ],
+  premium: [
+    {
+      value: 'entreprise_etablie',
+      title: 'Entreprise établie',
+      desc: 'Société BTP avec historique, label et multi-utilisateurs.',
+      profilType: 'entreprise_btp',
+    },
+    {
+      value: 'fournisseur_actif',
+      title: 'Fournisseur actif',
+      desc: 'Fournisseur déjà actif sur le marché, mise en avant Premium.',
+      profilType: 'fournisseur',
+    },
+  ],
+  access: [
+    {
+      value: 'vendeur_materiaux',
+      title: 'Vendeur de matériaux',
+      desc: 'Boutique e-commerce / vitrine au forfait Access.',
+      profilType: 'fournisseur',
+    },
+    {
+      value: 'negociant',
+      title: 'Négociant',
+      desc: 'Négociant en matériaux et équipements de construction.',
+      profilType: 'fournisseur',
+    },
+  ],
+  business: [
+    {
+      value: 'offreur_btp',
+      title: 'Offreur de produits et services BTP',
+      desc: 'Besoins complexes à la carte : spots, promotions spéciales, etc.',
+      profilType: 'entreprise_btp',
+    },
+    {
+      value: 'promoteur_immo',
+      title: 'Promoteur immobilier',
+      desc: 'Promoteur avec besoins spécifiques et accompagnement commercial.',
+      profilType: 'maitre_ouvrage',
+    },
+  ],
+};
+
+export function ciblesPourFormule(palier) {
+  return CIBLES_PAR_FORMULE[palier] || [];
+}
+
+export function formalitesPour(profilType) {
+  return FORMALITES_PAR_PROFIL[profilType] || [];
+}
+
+/** @deprecated — préférer CIBLES_PAR_FORMULE ; conservé pour compat. */
 export const PROFIL_OPTIONS = [
   {
     value: 'entreprise_btp',
     title: 'Entreprise BTP',
-    desc: 'Entreprise de construction, rénovation ou génie civil.',
+    desc: 'Construction, rénovation ou génie civil.',
+    formalites: FORMALITES_PAR_PROFIL.entreprise_btp,
   },
   {
     value: 'artisan',
-    title: 'Artisan',
-    desc: 'Professionnel qualifié sur un ou plusieurs métiers du bâtiment.',
+    title: 'Artisan / Professionnel',
+    desc: 'Professionnel qualifié du bâtiment.',
+    formalites: FORMALITES_PAR_PROFIL.artisan,
   },
   {
     value: 'prestataire',
-    title: 'Prestataire',
-    desc: 'Bureau d\'études, topographe, architecte ou prestataire technique.',
+    title: 'Cabinet / Prestataire',
+    desc: 'Bureau d’études et prestataires techniques.',
+    formalites: FORMALITES_PAR_PROFIL.prestataire,
   },
   {
     value: 'fournisseur',
-    title: 'Fournisseur',
-    desc: 'Vendeur de matériaux et équipements de construction.',
+    title: 'Fournisseur / Négociant',
+    desc: 'Vendeurs de matériaux.',
+    formalites: FORMALITES_PAR_PROFIL.fournisseur,
   },
   {
     value: 'maitre_ouvrage',
-    title: 'Maître d\'ouvrage',
-    desc: 'Client ou promoteur recherchant des professionnels fiables.',
+    title: 'Maître d’ouvrage / Promoteur',
+    desc: 'Clients et promoteurs.',
+    formalites: FORMALITES_PAR_PROFIL.maitre_ouvrage,
   },
 ];
 
@@ -59,27 +165,75 @@ export const PALIERS = [
     value: 'decouverte',
     title: 'Découverte',
     price: 0,
-    features: ['Fiche annuaire', '2 réponses AO / mois', 'Messagerie limitée'],
+    cible: 'PME informelles · pros BTP · particuliers',
+    features: [
+      'Profil de base',
+      'Consultation de l’annuaire',
+      'Candidatures limitées aux opportunités (2 / mois)',
+      'CV de professionnels qualifiés',
+    ],
   },
   {
     value: 'standard',
     title: 'Standard',
-    price: 50000,
-    features: ['Réponses AO illimitées', 'Badge membre', 'Alertes métiers'],
+    price: 200000,
+    cible: 'PME structurées · cabinets d’études',
+    features: [
+      'Profil complet',
+      'Réponses AO illimitées',
+      'Messagerie & tableau de bord projets',
+      'Alertes appels d’offres',
+      'Publication de produits dans la Marketplace',
+      'Appels d’offres publiés et réponses reçues',
+    ],
   },
   {
     value: 'premium',
     title: 'Premium',
-    price: 150000,
-    features: ['AO 24 h à l\'avance', 'Boost annuaire', 'Support prioritaire'],
+    price: 500000,
+    cible: 'Entreprises établies · fournisseurs actifs',
+    features: [
+      'Badge vérifié & mise en avant annuaire',
+      'Accès anticipé aux opportunités',
+      'Statistiques & comptes multi-utilisateurs',
+      'Marketplace sans commission',
+    ],
   },
   {
-    value: 'fournisseur',
-    title: 'Fournisseur',
-    price: 75000,
-    features: ['Boutique matériaux', 'Stock & commandes', 'Visibilité catalogue'],
+    value: 'access',
+    title: 'Access',
+    price: 1000000,
+    cible: 'Vendeurs de matériaux · négociants',
+    features: [
+      'Vitrine Marketplace et demandes directes',
+      'Options de visibilité',
+      '0 % de rétrocession sur les mises en relation',
+    ],
+  },
+  {
+    value: 'business',
+    title: 'Business',
+    price: null,
+    cible: 'Offreurs BTP · promoteurs',
+    features: [
+      'Offre à la carte (spots, promotions, etc.)',
+      'Accompagnement commercial dédié',
+      'Droits sur mesure',
+    ],
   },
 ];
+
+export const DROITS_PALIER = {
+  decouverte: { messagerie: false, boutique: false, labellisation: true, ao: true, formations: true },
+  standard: { messagerie: true, boutique: true, labellisation: true, ao: true, formations: true },
+  premium: { messagerie: true, boutique: true, labellisation: true, ao: true, formations: true, stats: true },
+  access: { messagerie: true, boutique: true, labellisation: true, ao: true, formations: true },
+  business: { messagerie: true, boutique: true, labellisation: true, ao: true, formations: true, stats: true },
+};
+
+export function droitsClient(palier) {
+  return DROITS_PALIER[palier] || DROITS_PALIER.decouverte;
+}
 
 export const CHARTE_TEXT = `Charte d'adhésion — Bénin Top Builders
 
@@ -102,11 +256,16 @@ Article 6 — Confidentialité
 Les données échangées via la plateforme restent confidentielles. Les coordonnées des non-membres sont masquées conformément aux règles de la messagerie.
 
 Article 7 — Paiements
-Les abonnements, labellisations, formations et commandes sont payés en FCFA via FSPay. Aucune commission n'est prélevée sur les mises en relation issues de l'adhésion.
+Les abonnements (Découverte 0 · Standard 200 000 · Premium 500 000 · Access 1 000 000 FCFA / an · Business sur devis), labellisations et formations sont payés en FCFA via FSPay. Les transactions issues de la Marketplace sont conclues hors plateforme et ne donnent lieu à aucune commission BTB.
 
 Article 8 — Acceptation
 En cochant la case d'acceptation, le membre reconnaît avoir lu et accepté la présente charte. L'acceptation est horodatée et conservée.`;
 
 export function formatFcfa(n) {
+  if (n == null) return 'Sur devis';
   return new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
+}
+
+export function labelPalier(value) {
+  return PALIERS.find((p) => p.value === value)?.title || value;
 }

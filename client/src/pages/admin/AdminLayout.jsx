@@ -1,36 +1,38 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import AppShell from '../../components/layout/AppShell';
+import { Icon } from '../../components/ui/icons';
 
-const links = [
-  { to: '/admin', end: true, label: 'Statistiques' },
-  { to: '/admin/dossiers', label: 'Dossiers' },
-  { to: '/admin/membres', label: 'Membres' },
-  { to: '/admin/moderation', label: 'Modération' },
-  { to: '/admin/audit', label: 'Audit' },
+const sections = [
+  {
+    heading: 'Centre de pilotage',
+    items: [{ to: '/admin', end: true, label: 'Vue d’ensemble', icon: Icon.chart({}) }],
+  },
+  {
+    heading: 'Académie BTB',
+    items: [
+      { to: '/admin/formations', label: 'Formations & formateurs', icon: Icon.book({}) },
+      { to: '/admin/formulaires-label', label: 'Parcours & labels', icon: Icon.book({}) },
+    ],
+  },
+  {
+    heading: 'Communauté',
+    items: [
+      { to: '/admin/dossiers', label: 'Dossiers', icon: Icon.folder({}) },
+      { to: '/admin/membres', label: 'Membres', icon: Icon.users({}) },
+    ],
+  },
+  {
+    heading: 'Qualité & conformité',
+    items: [
+      { to: '/admin/moderation', label: 'Modération', icon: Icon.shield({}) },
+      { to: '/admin/audit', label: 'Audit', icon: Icon.list({}) },
+    ],
+  },
+  {
+    heading: 'Compte',
+    items: [{ to: '/admin/securite', label: 'Mot de passe', icon: Icon.shield({}) }],
+  },
 ];
 
 export default function AdminLayout() {
-  return (
-    <div className="mx-auto grid min-h-[70vh] max-w-6xl gap-6 px-4 py-8 md:grid-cols-[220px_1fr] md:px-8">
-      <aside className="card h-fit p-3">
-        <p className="px-2 text-xs font-extrabold uppercase tracking-wide text-bleu">Back-office</p>
-        <nav className="mt-3 flex flex-col gap-1">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.end}
-              className={({ isActive }) =>
-                `rounded-2xl px-3 py-2 text-sm font-bold ${isActive ? 'bg-ink text-white' : 'hover:bg-fond-doux'}`
-              }
-            >
-              {l.label}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
-      <div>
-        <Outlet />
-      </div>
-    </div>
-  );
+  return <AppShell brand="Back-office" title="Administration" sections={sections} accent="orange" />;
 }

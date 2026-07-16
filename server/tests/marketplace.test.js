@@ -6,7 +6,7 @@ import { User } from '../src/models/User.js';
 import { Produit } from '../src/models/Produit.js';
 import { Commande } from '../src/models/Commande.js';
 import { hashPassword } from '../src/utils/crypto.js';
-import { creerCommande, transitionCommande } from '../src/services/marketplace.service.js';
+import { creerCommande, transitionCommande, upsertProduit } from '../src/services/marketplace.service.js';
 
 const app = createApp();
 
@@ -24,7 +24,7 @@ async function makeUser(email, overrides = {}) {
     departement: 'Littoral',
     ville: 'Cotonou',
     slug: email.replace(/[@.]/g, '-'),
-    palier: 'fournisseur',
+    palier: 'access',
     fichePubliee: true,
     ...overrides,
   });
@@ -45,13 +45,9 @@ afterAll(async () => {
 });
 
 describe('Marketplace', () => {
-  it('décrémente le stock de façon concurrente sans survente', async () => {
+  it('crée une demande hors plateforme sans commission ni réservation de stock', async () => {
     const vendeur = await makeUser('vendeur@mkt.example.bj');
     const acheteur1 = await makeUser('a1@mkt.example.bj', {
-      profilType: 'maitre_ouvrage',
-      palier: 'standard',
-    });
-    const acheteur2 = await makeUser('a2@mkt.example.bj', {
       profilType: 'maitre_ouvrage',
       palier: 'standard',
     });
@@ -70,18 +66,15 @@ describe('Marketplace', () => {
       adresseLivraison: { nom: 'Client', telephone: '+22990000000', ville: 'Cotonou' },
     };
 
-    const results = await Promise.allSettled([
-      creerCommande(acheteur1, payload),
-      creerCommande(acheteur2, payload),
-    ]);
-
-    const ok = results.filter((r) => r.status === 'fulfilled');
-    const ko = results.filter((r) => r.status === 'rejected');
-    expect(ok.length).toBe(1);
-    expect(ko.length).toBe(1);
+    const result = await creerCommande(acheteur1, payload);
+    expect(result.needsPayment).toBe(false);
+    expect(result.commissionTaux).toBe(0);
+    expect(result.commandes).toHaveLength(1);
+    expect(result.commandes[0].statut).toBe('demande_envoyee');
+    expect(result.commandes[0].fraisService).toBe(0);
 
     const refreshed = await Produit.findById(produit._id);
-    expect(refreshed.stock).toBe(1);
+    expect(refreshed.stock).toBe(5);
   });
 
   it('refuse une transition invalide (422)', async () => {
@@ -98,14 +91,33 @@ describe('Marketplace', () => {
       stock: 10,
     });
 
-    const { commande } = await creerCommande(acheteur, {
+    const { commandes } = await creerCommande(acheteur, {
       lignes: [{ produitId: produit._id, quantite: 1 }],
       adresseLivraison: { nom: 'X', telephone: '+22991111111', ville: 'Cotonou' },
     });
 
-    await expect(transitionCommande(commande._id, vendeur, 'livree')).rejects.toMatchObject({
+    await expect(transitionCommande(commandes[0]._id, acheteur, 'finalisee')).rejects.toMatchObject({
       status: 422,
       code: 'INVALID_TRANSITION',
+    });
+  });
+
+  it('autorise la vitrine dès Standard et la refuse à Découverte', async () => {
+    const standard = await makeUser('standard@mkt.example.bj', { palier: 'standard' });
+    const decouverte = await makeUser('free@mkt.example.bj', { palier: 'decouverte' });
+    const payload = {
+      nom: 'Service topographie',
+      categorie: 'services',
+      prixUnitaire: 25000,
+      stock: 1,
+    };
+
+    await expect(upsertProduit(standard, payload)).resolves.toMatchObject({
+      nom: 'Service topographie',
+    });
+    await expect(upsertProduit(decouverte, payload)).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
     });
   });
 

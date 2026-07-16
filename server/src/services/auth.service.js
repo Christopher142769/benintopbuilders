@@ -102,12 +102,16 @@ export async function register(payload) {
     slug,
   });
 
-  await createAndSendOtp(user.email);
+  const code = await createAndSendOtp(user.email);
 
   return {
     user: publicUser(user),
     nextStep: 'otp',
-    message: 'Compte créé. Vérifiez votre e-mail pour le code OTP.',
+    message:
+      env.nodeEnv === 'production'
+        ? 'Compte créé. Vérifiez votre e-mail pour le code OTP.'
+        : 'Compte créé. Mode démo : le code OTP s’affiche ci-dessous (SMTP non requis).',
+    ...(env.nodeEnv !== 'production' ? { devOtp: code } : {}),
   };
 }
 
@@ -167,8 +171,14 @@ export async function resendOtp(email) {
     });
   }
 
-  await createAndSendOtp(email);
-  return { message: 'Nouveau code envoyé' };
+  const code = await createAndSendOtp(email);
+  return {
+    message:
+      env.nodeEnv === 'production'
+        ? 'Nouveau code envoyé'
+        : 'Nouveau code généré (mode démo — affiché ci-dessous)',
+    ...(env.nodeEnv !== 'production' ? { devOtp: code } : {}),
+  };
 }
 
 export async function acceptCharte(userId) {
@@ -186,7 +196,7 @@ export async function acceptCharte(userId) {
   return { user: publicUser(user), nextStep: 'paiement' };
 }
 
-/** Sélection de palier — Découverte active immédiatement ; les autres attendent FSPay (étape 4). */
+/** Sélection de palier — Découverte active tout de suite ; Business = devis ; sinon FSPay. */
 export async function selectPalier(userId, palier) {
   const user = await User.findById(userId);
   if (!user) throw new AppError('Compte introuvable', { status: 404, code: 'NOT_FOUND' });
@@ -194,8 +204,34 @@ export async function selectPalier(userId, palier) {
     throw new AppError('Étape palier non disponible', { status: 400, code: 'INVALID_STATUS' });
   }
 
-  const montant = TARIFS_FCFA.adhesion[palier] ?? 0;
+  if (!(palier in TARIFS_FCFA.adhesion)) {
+    throw new AppError('Formule inconnue', { status: 400, code: 'INVALID_PALIER' });
+  }
+
+  const montant = TARIFS_FCFA.adhesion[palier];
   user.palier = palier;
+
+  /** Business — offre à la carte : demande commerciale, activation provisoire Découverte-équivalente. */
+  if (montant == null) {
+    user.statut = 'actif';
+    user.role = user.role === 'visiteur' ? 'membre' : user.role;
+    user.adhesionExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    user.commercialDemandeAt = new Date();
+    if (user.profilType !== 'maitre_ouvrage') {
+      user.fichePubliee = true;
+    }
+    await user.save();
+    await sendWelcomeEmail(user);
+    return {
+      user: publicUser(user),
+      needsPayment: false,
+      needsCommercial: true,
+      montant: null,
+      nextStep: 'dashboard',
+      message:
+        'Demande Business enregistrée. Un conseiller vous recontacte pour un devis à la carte. Accès provisoire 30 jours.',
+    };
+  }
 
   if (montant === 0) {
     user.statut = 'actif';
@@ -250,6 +286,7 @@ export async function login({ email, password }) {
 
 function redirectForStatut(statut, role) {
   if (role === 'admin' || role === 'superadmin') return '/admin';
+  if (role === 'formateur') return '/formateur';
   switch (statut) {
     case 'pending_otp':
       return '/inscription?etape=otp';
@@ -318,6 +355,26 @@ export async function resetPassword({ token, password }) {
   user.refreshTokenHash = undefined;
   await user.save();
   return { message: 'Mot de passe mis à jour' };
+}
+
+export async function changePassword(userId, { currentPassword, newPassword }) {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('Compte introuvable', { status: 404, code: 'NOT_FOUND' });
+  }
+  const valid = await verifyPassword(currentPassword, user.passwordHash);
+  if (!valid) {
+    throw new AppError('Le mot de passe actuel est incorrect', {
+      status: 401,
+      code: 'CURRENT_PASSWORD_INVALID',
+    });
+  }
+  user.passwordHash = await hashPassword(newPassword);
+  user.passwordResetTokenHash = undefined;
+  user.passwordResetExpireAt = undefined;
+  user.refreshTokenHash = undefined;
+  await user.save();
+  return { message: 'Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe.' };
 }
 
 export async function me(userId) {

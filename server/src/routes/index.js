@@ -13,6 +13,7 @@ import avisRoutes from './avis.routes.js';
 import adhesionRoutes from './adhesion.routes.js';
 import adminRoutes from './admin.routes.js';
 import notificationsRoutes from './notifications.routes.js';
+import trainerRoutes from './trainer.routes.js';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/formations', formationsRoutes);
 router.use('/avis', avisRoutes);
 router.use('/admin', adminRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/formateur', trainerRoutes);
 
 export default router;

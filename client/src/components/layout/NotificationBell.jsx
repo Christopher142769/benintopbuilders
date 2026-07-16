@@ -69,10 +69,10 @@ export default function NotificationBell() {
             {items.length === 0 && <p className="p-3 text-xs text-black/50">Aucune notification</p>}
             {items.map((n) => (
               <Link
-                key={n._id}
+                key={n.id || n._id}
                 to={n.lien || '/dashboard'}
                 onClick={async () => {
-                  await api.post(`/notifications/${n._id}/lu`);
+                  await api.post(`/notifications/${n.id || n._id}/lu`);
                   setOpen(false);
                   qc.invalidateQueries({ queryKey: ['notif-count'] });
                 }}
